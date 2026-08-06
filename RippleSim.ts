@@ -203,7 +203,7 @@ export class RippleSim {
     verticalPanelWidth = 0;
     startExampleText: string | null = null;
     startExample: string | null = null;
-    versionString = "1.4";
+    versionString = "1.5";
 
     // menu items that need to be enabled/disabled dynamically
     undoItem!: HTMLButtonElement;
@@ -867,6 +867,10 @@ export class RippleSim {
             }
         RippleSim.setTransform(1, 0, 0, 0, 1, 0);
         RippleSim.setDrawingSelection(-1);
+        if (this.view3dCheck.getState())
+            for (const obj of this.dragObjects)
+                if (obj instanceof Probe)
+                    obj.probeView.draw();
         if (!this.view3dCheck.getState() && this.rulerStart != null && this.rulerEnd != null) {
             RippleSim.setDrawingColor(1, 1, 1, 1);
             RippleSim.setDrawingSelection(1);
