@@ -74,7 +74,7 @@ export class Probe extends DragObject {
         }
         this.colorIndex = (this.num % 8) * 3;
         this.probeView = new ProbeView(this.num,
-            new Color(Probe.colors[this.colorIndex], Probe.colors[this.colorIndex + 1], Probe.colors[this.colorIndex + 2]),
+            new Color(Math.round(Probe.colors[this.colorIndex] * 255), Math.round(Probe.colors[this.colorIndex + 1] * 255), Math.round(Probe.colors[this.colorIndex + 2] * 255)),
             (this.flags & Probe.FLAG_OPEN) !== 0);
     }
 

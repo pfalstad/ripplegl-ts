@@ -47,12 +47,9 @@ export class Source extends DragObject {
     frequencyEditInfo: EditInfo | null = null;
     wavelengthEditInfo: EditInfo | null = null;
 
-    constructor();
-    constructor(st: StringTokenizer, ct: number);
-    constructor(x: number, y: number);
     constructor(arg0?: number | StringTokenizer, arg1?: number) {
+        super(arg0 instanceof StringTokenizer ? arg0 : undefined);
         if (arg0 instanceof StringTokenizer) {
-            super(arg0);
             let ct = arg1 as number;
             while (ct-- > 0)
                 this.handles.push(new DragHandle(this, arg0));
@@ -68,7 +65,6 @@ export class Source extends DragObject {
             }
             this.setTransform();
         } else if (arg0 !== undefined) {
-            super();
             this.handles.push(new DragHandle(this, arg0, arg1 as number));
             this.frequency = .5;
             this.pulseLength = 10;
@@ -76,7 +72,6 @@ export class Source extends DragObject {
             this.strength = 1;
             this.setTransform();
         } else {
-            super();
             this.handles.push(new DragHandle(this));
             this.frequency = .5;
 

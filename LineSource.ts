@@ -29,16 +29,12 @@ export class LineSource extends Source {
 
     gauss = false;
 
-    constructor();
-    constructor(st: StringTokenizer);
-    constructor(x: number, y: number, x2: number, y2: number);
     constructor(arg0?: number | StringTokenizer, arg1?: number, arg2?: number, arg3?: number) {
+        super(arg0 instanceof StringTokenizer ? arg0 : undefined, arg0 instanceof StringTokenizer ? 2 : undefined);
         if (arg0 instanceof StringTokenizer) {
-            super(arg0, 2);
             this.setTransform();
             this.gauss = (this.flags & LineSource.FLAG_GAUSS) !== 0;
         } else if (arg0 !== undefined) {
-            super();
             const h0 = this.handles[0];
             h0.x = arg0;
             h0.y = arg1 as number;
@@ -48,7 +44,6 @@ export class LineSource extends Source {
             this.delay = 100;
             this.setTransform();
         } else {
-            super();
             this.handles.push(new DragHandle(this));
             this.setTransform();
         }

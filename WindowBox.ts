@@ -166,6 +166,11 @@ export class WindowBox {
         this.body.appendChild(el);
     }
 
+    setSize(width: number, height: number): void {
+        this.element.style.width = width + "px";
+        this.body.style.height = height + "px";
+    }
+
     getWidget(): HTMLElement | null {
         return this.body.firstElementChild as HTMLElement | null;
     }

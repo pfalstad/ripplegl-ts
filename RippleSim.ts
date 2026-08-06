@@ -771,11 +771,10 @@ export class RippleSim {
         this.clearSelection();
         this.pushUndo();
         if (this.editDialog != null) {
-            this.editDialog.setVisible(false);
+            this.editDialog.closeDialog();
             this.editDialog = null;
         }
         this.editDialog = new EditDialog(eable, this);
-        this.editDialog.show();
     }
 
     doExportAsUrl(): void {

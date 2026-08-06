@@ -49,9 +49,8 @@ export class ProbeView extends WindowBox {
         super(false, false, true, true);
 
         this.cv = document.createElement("canvas");
-        this.cv.style.width = "400px";
-        this.cv.style.height = "100px";
         this.setWidget(this.cv);
+        this.setSize(400, 100);
         this.ctx = this.cv.getContext("2d")!;
 
         this.values = new Array(100).fill(0);

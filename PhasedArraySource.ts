@@ -25,19 +25,13 @@ import { EditInfo } from "./EditInfo";
 export class PhasedArraySource extends LineSource {
     phaseShift2 = 0;
 
-    constructor();
-    constructor(st: StringTokenizer);
-    constructor(x1: number, y1: number, x2: number, y2: number, ps1: number, ps2: number);
     constructor(arg0?: number | StringTokenizer, arg1?: number, arg2?: number, arg3?: number, ps1?: number, ps2?: number) {
+        super(arg0, arg1, arg2, arg3);
         if (arg0 instanceof StringTokenizer) {
-            super(arg0);
             this.phaseShift2 = parseFloat(arg0.nextToken());
         } else if (arg0 !== undefined) {
-            super(arg0, arg1 as number, arg2 as number, arg3 as number);
             this.phaseShift = ps1 as number;
             this.phaseShift2 = ps2 as number;
-        } else {
-            super();
         }
     }
 

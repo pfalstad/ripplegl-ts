@@ -30,12 +30,11 @@ export class MovingSource extends Source {
     phase = 0;
 
     constructor(st?: StringTokenizer) {
+        super(st != null ? st : undefined, st != null ? 2 : undefined);
         if (st != null) {
-            super(st, 2);
             this.moveDuration = parseInt(st.nextToken());
             this.pauseDuration = parseInt(st.nextToken());
         } else {
-            super();
             this.handles.push(new DragHandle(this));
             this.moveDuration = 900;
             this.pauseDuration = 500;
