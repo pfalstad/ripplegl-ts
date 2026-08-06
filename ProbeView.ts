@@ -39,6 +39,7 @@ export class ProbeView extends WindowBox {
     color: Color;
     recording = false;
     recordingBuffer: string[] | null = null;
+    hoverX: number | null = null;
 
     private startRecordingItem!: MenuItemDesc;
     private stopRecordingItem!: MenuItemDesc;
@@ -61,6 +62,8 @@ export class ProbeView extends WindowBox {
         this.setText("Probe View " + (n + 1));
 
         this.cv.addEventListener("contextmenu", (e) => this.onContextMenu(e));
+        this.cv.addEventListener("mousemove", (e) => { this.hoverX = e.offsetX; });
+        this.cv.addEventListener("mouseleave", () => { this.hoverX = null; });
 
         const winwidth = window.innerWidth;
         const winheight = window.innerHeight;
@@ -102,6 +105,28 @@ export class ProbeView extends WindowBox {
             this.ctx.lineTo(i, height * (.5 - .47 * this.values[(i + this.offset) % this.values.length] / this.maxValue));
         this.ctx.stroke();
         this.drawFrequency(g);
+        this.drawHover(g, sim, width, height);
+    }
+
+    private drawHover(g: Graphics, sim: RippleSim, width: number, height: number): void {
+        if (this.hoverX == null)
+            return;
+        const x = Math.round(this.hoverX);
+        if (x < 0 || x >= this.values.length)
+            return;
+        const v = this.values[(x + this.offset) % this.values.length];
+        const simTime = sim.t - (this.values.length - 1 - x) * RippleSim.timeStep;
+        const realTime = sim.timeToRealTime(simTime);
+        g.setColor("#888");
+        g.drawLine(x, 0, x, height);
+        const txt = "t = " + RippleSim.getUnitText(realTime, "s") + ", A = " + RippleSim.showFormat(v * 1000);
+        g.setFont(this.font);
+        const txtWidth = this.ctx.measureText(txt).width;
+        const tx = Math.min(Math.max(x - txtWidth / 2, 2), width - txtWidth - 2);
+        g.setColor("#ffffffcc");
+        g.fillRect(tx - 2, height - 20, txtWidth + 4, 18);
+        g.setColor("#000");
+        g.drawString(txt, tx, height - 6);
     }
 
     recordValue(x: number): void {
