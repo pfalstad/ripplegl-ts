@@ -111,6 +111,7 @@ export class RippleSim {
     static readonly MODE_CLEAR = 2;
     static readonly MODE_HOLD = 3;
     static readonly MODE_HOLD_MINUS = 4;
+    static readonly MODE_RULER = 5;
     static readonly WAVE_SOUND = 0;
     static readonly timeStep = .25;
     static readonly MENUBARHEIGHT = 30;
@@ -190,6 +191,8 @@ export class RippleSim {
     schemeColors: Color[][] = [];
     dragPoint: Point | null = null;
     pokePoint: Point | null = null;
+    rulerStart: Point | null = null;
+    rulerEnd: Point | null = null;
     pokeValue = 0;
 
     loadFileInput: LoadFile | null = null;
@@ -382,6 +385,13 @@ export class RippleSim {
         this.modeChooser.add("Mouse = Clear Wave");
         this.modeChooser.add("Mouse = Hold Wave (+)");
         this.modeChooser.add("Mouse = Hold Wave (-)");
+        this.modeChooser.add("Mouse = Ruler");
+        this.modeChooser.addChangeHandler(() => {
+            if (this.modeChooser.getSelectedIndex() !== RippleSim.MODE_RULER) {
+                this.rulerStart = null;
+                this.rulerEnd = null;
+            }
+        });
 
         this.sidebarEl.appendChild(this.setupChooser.element);
         this.sidebarEl.appendChild(this.modeChooser.element);
@@ -857,7 +867,31 @@ export class RippleSim {
             }
         RippleSim.setTransform(1, 0, 0, 0, 1, 0);
         RippleSim.setDrawingSelection(-1);
+        if (!this.view3dCheck.getState() && this.rulerStart != null && this.rulerEnd != null) {
+            RippleSim.setDrawingColor(1, 1, 1, 1);
+            RippleSim.setDrawingSelection(1);
+            RippleSim.drawWall(this.rulerStart.x, this.rulerStart.y, this.rulerEnd.x, this.rulerEnd.y);
+            RippleSim.setDrawingSelection(-1);
+            RippleSim.drawFocus(this.rulerStart.x, this.rulerStart.y);
+            RippleSim.drawFocus(this.rulerEnd.x, this.rulerEnd.y);
+        }
         this.doCoordsLabel();
+    }
+
+    // returns a sine-wave Source if all sources in the circuit are sine waves of the same frequency, else null
+    getSoleSineSource(): Source | null {
+        let found: Source | null = null;
+        for (const obj of this.dragObjects) {
+            if (!(obj instanceof Source))
+                continue;
+            if (obj.waveform !== Source.WF_SINE)
+                return null;
+            if (found == null)
+                found = obj;
+            else if (Math.abs(obj.frequency - found.frequency) > 1e-3)
+                return null;
+        }
+        return found;
     }
 
     doCoordsLabel(): void {
@@ -866,6 +900,17 @@ export class RippleSim {
             return;
         }
         let txt = (this.selectedObject != null) ? this.selectedObject.selectText() : null;
+        if (txt == null && this.rulerStart != null && this.rulerEnd != null) {
+            const dx = this.rulerEnd.x - this.rulerStart.x;
+            const dy = this.rulerEnd.y - this.rulerStart.y;
+            const distPx = Math.hypot(dx, dy);
+            txt = "distance = " + this.getLengthText(distPx);
+            const src = this.getSoleSineSource();
+            if (src != null) {
+                const wavelengths = (distPx * this.lengthScale) / src.getWavelength();
+                txt += " (" + wavelengths.toFixed(2) + " λ)";
+            }
+        }
         if (txt == null)
             txt = "t = " + RippleSim.getUnitText(this.getRealTime(), "s");
         const pt = this.mouseLocation;
@@ -1375,6 +1420,8 @@ export class RippleSim {
                 this.dragPoint = pt;
                 this.changedWalls = true;
             }
+        } else if (this.rulerStart != null) {
+            this.rulerEnd = pt;
         } else {
             if (this.pokePoint != null)
                 this.pokePoint = pt;
@@ -1447,6 +1494,11 @@ export class RippleSim {
         }
 
         if (this.mouseObject == null && event.button !== 2) {
+            if (this.modeChooser.getSelectedIndex() === RippleSim.MODE_RULER) {
+                this.rulerStart = mp;
+                this.rulerEnd = mp;
+                return;
+            }
             this.pokeValue = 1;
             if (this.modeChooser.getSelectedIndex() === RippleSim.MODE_CLEAR)
                 this.pokeValue = 0;
