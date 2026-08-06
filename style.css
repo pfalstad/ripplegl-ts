@@ -152,13 +152,14 @@ select {
 #sidebar {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     overflow-y: auto;
     padding: 4px;
     box-sizing: border-box;
 }
 
 #sidebar select {
-    width: 100%;
+    max-width: 100%;
     margin-bottom: 4px;
 }
 
