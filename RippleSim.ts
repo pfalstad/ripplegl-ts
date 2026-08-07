@@ -172,6 +172,7 @@ export class RippleSim {
     dragging = false;
     dragStop = false;
     changedWalls = false;
+    needsRedraw = true;
     ignoreFreqBarSetting = false;
     t = 0;
     lengthScale = 0;
@@ -478,6 +479,14 @@ export class RippleSim {
         this.cv.addEventListener("dblclick", (e) => this.onDoubleClick(e));
         this.cv.addEventListener("contextmenu", (e) => this.onContextMenu(e));
         this.doTouchHandlers(this.cv);
+
+        // when the sim is stopped, updateRipple() skips rendering unless something
+        // that could affect the picture has happened; these listeners flag that
+        const markDirty = () => { this.needsRedraw = true; };
+        for (const evt of ["mousemove", "mousedown", "mouseup", "mouseout", "wheel",
+            "touchstart", "touchmove", "click", "input", "change"])
+            document.addEventListener(evt, markDirty, { passive: true });
+        window.addEventListener("resize", markDirty);
 
         this.reinit();
         RippleSim.set3dViewZoom(this.zoom3d);
@@ -843,13 +852,17 @@ export class RippleSim {
     }
 
     updateRipple(): void {
+        let iterCount = this.speedBar.getValue();
+        if (this.stoppedCheck.getState() || this.dragStop)
+            iterCount = 0;
+        // while stopped, skip the whole render if nothing that could change the picture has happened
+        if (iterCount === 0 && !this.needsRedraw && !this.changedWalls)
+            return;
+        this.needsRedraw = false;
         if (this.changedWalls) {
             this.prepareObjects();
             this.changedWalls = false;
         }
-        let iterCount = this.speedBar.getValue();
-        if (this.stoppedCheck.getState() || this.dragStop)
-            iterCount = 0;
         RippleSim.setAcoustic(this.waveChooser.getSelectedIndex() === RippleSim.WAVE_SOUND);
         for (let i = 0; i !== iterCount; i++) {
             RippleSim.simulate();
