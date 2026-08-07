@@ -220,7 +220,11 @@ void main()
     attribute highp vec2 aTextureCoord;
     uniform mat4 uMVMatrix;
     uniform mat4 uPMatrix;
-	uniform highp float xOffset;
+	// left/right texture-x edges of this strip; aTextureCoord.x is 0 or 1 selecting between them.
+	// both edges are always passed in using the same formula the neighboring strip uses for its
+	// shared edge, so adjacent strips meet at bit-identical coordinates and don't crack apart
+	uniform highp float xOffset0;
+	uniform highp float xOffset1;
 
     varying vec2 vTextureCoord;
     varying vec4 vPosition;
@@ -230,7 +234,7 @@ void main()
     uniform lowp vec3 colors[TS_COL_COUNT];
 
     void main(void) {
-		highp vec2 tc  = vec2(aTextureCoord.x+xOffset, aTextureCoord.y);
+		highp vec2 tc  = vec2(mix(xOffset0, xOffset1, aTextureCoord.x), aTextureCoord.y);
         vec4 pv = texture2D(uSampler, tc);
 		float r =  pv.r*brightness;
         vPosition = uMVMatrix * vec4(-1.0+2.0*tc.x, -1.0+2.0*tc.y, r, 1.0);
@@ -242,8 +246,8 @@ void main()
 			col = colors[TS_COL_WALL];
 		else {
 			// calculate normal
-			float qx = texture2D(uSampler, vec2(aTextureCoord.x+xOffset+1./200., aTextureCoord.y)).r-pv.r;
-			float qy = texture2D(uSampler, vec2(aTextureCoord.x+xOffset, aTextureCoord.y+1./200.)).r-pv.r;
+			float qx = texture2D(uSampler, vec2(tc.x+1./200., tc.y)).r-pv.r;
+			float qy = texture2D(uSampler, vec2(tc.x, tc.y+1./200.)).r-pv.r;
 			qx *= brightness;  qy *= brightness;
 
 			// calculate lighting

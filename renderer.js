@@ -84,7 +84,8 @@ var transform = [1, 0, 0, 1, 0, 0];
     	shaderProgram3D = initShader("shader-draw-fs", "shader-3d-vs", null);
     	shaderProgram3D.brightnessUniform = gl.getUniformLocation(shaderProgram3D, "brightness");
     	shaderProgram3D.colorsUniform = gl.getUniformLocation(shaderProgram3D, "colors");
-    	shaderProgram3D.xOffsetUniform = gl.getUniformLocation(shaderProgram3D, "xOffset");
+    	shaderProgram3D.xOffset0Uniform = gl.getUniformLocation(shaderProgram3D, "xOffset0");
+    	shaderProgram3D.xOffset1Uniform = gl.getUniformLocation(shaderProgram3D, "xOffset1");
 
     	shaderProgramFixed = initShader("shader-simulate-fs", "shader-vs", null);
     	shaderProgramFixed.stepSizeXUniform = gl.getUniformLocation(shaderProgramFixed, "stepSizeX");
@@ -220,6 +221,7 @@ var transform = [1, 0, 0, 1, 0, 0];
                      ];
     var gridSize3D = 256;
     var gridRange;
+    var gridBase;
 
     function initBuffers() {
     	if (!vertexPositionBuffer)
@@ -265,12 +267,14 @@ var transform = [1, 0, 0, 1, 0, 0];
     	gl.bindBuffer(gl.ARRAY_BUFFER, screen3DTextureBuffer);
     	screen3DTextureBuffer.itemSize = 2;
     	var texture3D = [];
+    	gridBase = textureCoords[0];
     	gridRange = textureCoords[2]-textureCoords[0];
+    	// x is just a 0/1 flag here; the vertex shader mixes it against the xOffset0/xOffset1
+    	// uniforms (set in drawScene3D) to get the actual texture-x, so that adjacent strips'
+    	// shared edges are computed with the exact same formula and don't crack apart
     	for (var i = 0; i <= gridSize3D; i++) {
-    		texture3D.push(textureCoords[0],
-    					   textureCoords[0]+gridRange*i/gridSize3D,
-    					   textureCoords[0]+gridRange/gridSize3D,
-    					   textureCoords[0]+gridRange*i/gridSize3D);
+    		texture3D.push(0, textureCoords[0]+gridRange*i/gridSize3D,
+    					   1, textureCoords[0]+gridRange*i/gridSize3D);
     	}
     	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texture3D), gl.STATIC_DRAW);
     	screen3DTextureBuffer.numItems = texture3D.length / 2;
@@ -960,7 +964,8 @@ var transform = [1, 0, 0, 1, 0, 0];
         gl.enable(gl.DEPTH_TEST);
         var i;
         for (var i = 0; i != gridSize3D; i++) {
-            gl.uniform1f(shaderProgram3D.xOffsetUniform, gridRange*i/gridSize3D);
+            gl.uniform1f(shaderProgram3D.xOffset0Uniform, gridBase+gridRange*i/gridSize3D);
+            gl.uniform1f(shaderProgram3D.xOffset1Uniform, gridBase+gridRange*(i+1)/gridSize3D);
         	gl.drawArrays(gl.TRIANGLE_STRIP, 0, screen3DTextureBuffer.numItems);
         }
         gl.disable(gl.DEPTH_TEST);
