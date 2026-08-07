@@ -608,7 +608,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     	                    transform[2], transform[5], 0, 1], mtx);
     }
 
-    function setupForDrawing(v) {
+    function setupForDrawing(v, absorb) {
         if (renderer.drawingSelection > 0) {
        		gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, renderer.drawingColor[0]*renderer.drawingSelection, renderer.drawingColor[1]*renderer.drawingSelection,
 				renderer.drawingColor[2]*renderer.drawingSelection, renderer.drawingColor[3]);
@@ -617,10 +617,15 @@ var transform = [1, 0, 0, 1, 0, 0];
     		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
     		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
             gl.useProgram(shaderProgramDraw);
-            
-            // blue channel used for walls and media
-    		gl.colorMask(false, false, true, false);
-    		gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, v, 1.0);
+
+            // blue channel used for walls and media; alpha channel holds absorption factor
+            if (absorb === undefined) {
+    			gl.colorMask(false, false, true, false);
+    			gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, v, 1.0);
+            } else {
+    			gl.colorMask(false, false, true, true);
+    			gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, v, absorb);
+            }
     	}
     }
     
@@ -750,8 +755,8 @@ var transform = [1, 0, 0, 1, 0, 0];
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
     
-    function drawSolidEllipse(cx, cy, xr, yr, med) {
-    	setupForDrawing(med);
+    function drawSolidEllipse(cx, cy, xr, yr, med, absorb) {
+    	setupForDrawing(med, absorb);
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var coords = [cx, cy];
         var i;
@@ -775,16 +780,18 @@ var transform = [1, 0, 0, 1, 0, 0];
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
-    function drawMedium(x, y, x2, y2, x3, y3, x4, y4, m1, m2) {
+    function drawMedium(x, y, x2, y2, x3, y3, x4, y4, m1, m2, a1, a2) {
+		if (a1 === undefined) a1 = 1;
+		if (a2 === undefined) a2 = 1;
 		var rttFramebuffer = renderTexture1.framebuffer;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
 		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
-		gl.colorMask(false, false, true, false);
+		gl.colorMask(false, false, true, true);
 //		gl.clear(gl.COLOR_BUFFER_BIT);
         gl.useProgram(shaderProgramDraw);
 
         var medCoords = [x, y, x2, y2, x3, y3, x4, y4];
-        var colors = [ 0,0,m1,1, 0,0,m1,1, 0,0,m2,1, 0,0,m2,1 ];
+        var colors = [ 0,0,m1,a1, 0,0,m1,a1, 0,0,m2,a2, 0,0,m2,a2 ];
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(medCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -1025,8 +1032,8 @@ var transform = [1, 0, 0, 1, 0, 0];
     	renderer.drawParabola = function (x, y, w, h) { drawParabola(x, y, w, h); }
     	renderer.drawLens = function (x, y, w, h, m) { drawLens(x, y, w, h, m); }
     	renderer.drawEllipse = function (x, y, x2, y2, m) { drawEllipse(x, y, x2, y2); }
-    	renderer.drawSolidEllipse = function (x, y, x2, y2, m) { drawSolidEllipse(x, y, x2, y2, m); }
-    	renderer.drawMedium = function (x, y, x2, y2, x3, y3, x4, y4, m, m2) { drawMedium(x, y, x2, y2, x3, y3, x4, y4, m, m2); }
+    	renderer.drawSolidEllipse = function (x, y, x2, y2, m, absorb) { drawSolidEllipse(x, y, x2, y2, m, absorb); }
+    	renderer.drawMedium = function (x, y, x2, y2, x3, y3, x4, y4, m, m2, a1, a2) { drawMedium(x, y, x2, y2, x3, y3, x4, y4, m, m2, a1, a2); }
     	renderer.drawTriangle = function (x, y, x2, y2, x3, y3, m) { drawTriangle(x, y, x2, y2, x3, y3, m); }
     	renderer.drawModes = function (x, y, x2, y2, a, b, c, d) { drawModes(x, y, x2, y2, a, b, c, d); }
     	renderer.setTransform = function (a, b, c, d, e, f) {
@@ -1048,7 +1055,9 @@ var transform = [1, 0, 0, 1, 0, 0];
     		var rttFramebuffer = renderTexture1.framebuffer;
     		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
     		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
-    		gl.colorMask(false, false, true, false);
+    		// blue channel resets to "no wall, full speed"; alpha channel resets to "no absorption",
+    		// both overridden per-pixel by individual objects (walls, media) in their prepare() calls
+    		gl.colorMask(false, false, true, true);
         	gl.clearColor(0.0, 0.0, 1.0, 1.0);
     		gl.clear(gl.COLOR_BUFFER_BIT);
     		gl.colorMask(true, true, true, true);

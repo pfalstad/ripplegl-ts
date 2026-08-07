@@ -27,7 +27,8 @@ export class MediumEllipse extends MediumBox {
     prepare(): void {
         RippleSim.drawSolidEllipse(
             (this.topLeft.x + this.topRight.x) / 2, (this.topLeft.y + this.bottomLeft.y) / 2,
-            (this.topRight.x - this.topLeft.x) / 2, (this.bottomLeft.y - this.topLeft.y) / 2, this.speedIndex);
+            (this.topRight.x - this.topLeft.x) / 2, (this.bottomLeft.y - this.topLeft.y) / 2,
+            this.speedIndex, 1 - this.absorption);
     }
 
     hitTest(x: number, y: number): number {

@@ -25,6 +25,7 @@ import { EditDialog } from "./EditDialog";
 
 export class MediumBox extends RectDragObject {
     speedIndex: number;
+    absorption: number;
 
     constructor();
     constructor(st: StringTokenizer);
@@ -33,9 +34,11 @@ export class MediumBox extends RectDragObject {
         if (arg0 instanceof StringTokenizer) {
             super(arg0);
             this.speedIndex = parseFloat(arg0.nextToken());
+            this.absorption = arg0.hasMoreTokens() ? parseFloat(arg0.nextToken()) : 0;
         } else if (arg0 !== undefined) {
             super();
             this.speedIndex = .25;
+            this.absorption = 0;
             this.topLeft.x = this.bottomLeft.x = arg0;
             this.topLeft.y = this.topRight.y = y as number;
             this.topRight.x = this.bottomRight.x = x2 as number;
@@ -44,14 +47,16 @@ export class MediumBox extends RectDragObject {
         } else {
             super();
             this.speedIndex = .25;
+            this.absorption = 0;
         }
     }
 
     prepare(): void {
+        const alpha = 1 - this.absorption;
         RippleSim.drawMedium(this.topLeft.x, this.topLeft.y, this.topRight.x, this.topRight.y,
             this.bottomLeft.x, this.bottomLeft.y,
             this.bottomRight.x, this.bottomRight.y,
-            this.speedIndex, this.speedIndex);
+            this.speedIndex, this.speedIndex, alpha, alpha);
     }
 
     // let people poke inside
@@ -60,6 +65,8 @@ export class MediumBox extends RectDragObject {
     getEditInfo(n: number): EditInfo | null {
         if (n === 0)
             return new EditInfo("Refractive Index (1-2)", Math.sqrt(1 / this.speedIndex), 0, 1).setDimensionless();
+        if (n === 1)
+            return new EditInfo("Absorption (0-0.25)", this.absorption, 0, .25).setDimensionless();
         return null;
     }
 
@@ -69,6 +76,8 @@ export class MediumBox extends RectDragObject {
             ei.value = Math.sqrt(1 / this.speedIndex);
             EditDialog.theEditDialog!.updateValue(ei);
         }
+        if (n === 1)
+            this.absorption = Math.min(.25, Math.max(0, ei.value));
     }
 
     static getRefractiveIndex(v: number): number {
@@ -78,5 +87,5 @@ export class MediumBox extends RectDragObject {
     }
 
     getDumpType(): number { return "m".charCodeAt(0); }
-    dump(): string { return super.dump() + " " + this.speedIndex; }
+    dump(): string { return super.dump() + " " + this.speedIndex + " " + this.absorption; }
 }

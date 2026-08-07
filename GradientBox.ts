@@ -26,12 +26,15 @@ import { MediumBox } from "./MediumBox";
 export class GradientBox extends RectDragObject {
     speedIndex: number;
     speedIndex2: number;
+    absorption = 0;
 
     constructor(st?: StringTokenizer) {
         super(st);
         if (st != null) {
             this.speedIndex = parseFloat(st.nextToken());
             this.speedIndex2 = parseFloat(st.nextToken());
+            if (st.hasMoreTokens())
+                this.absorption = parseFloat(st.nextToken());
         } else {
             this.speedIndex = .25;
             this.speedIndex2 = .5;
@@ -39,10 +42,11 @@ export class GradientBox extends RectDragObject {
     }
 
     prepare(): void {
+        const alpha = 1 - this.absorption;
         RippleSim.drawMedium(this.topLeft.x, this.topLeft.y, this.topRight.x, this.topRight.y,
             this.bottomLeft.x, this.bottomLeft.y,
             this.bottomRight.x, this.bottomRight.y,
-            this.speedIndex, this.speedIndex2);
+            this.speedIndex, this.speedIndex2, alpha, alpha);
     }
 
     getEditInfo(n: number): EditInfo | null {
@@ -50,6 +54,8 @@ export class GradientBox extends RectDragObject {
             return new EditInfo("Refractive Index 1", Math.sqrt(1 / this.speedIndex), 0, 1).setDimensionless();
         if (n === 1)
             return new EditInfo("Refractive Index 2", Math.sqrt(1 / this.speedIndex2), 0, 1).setDimensionless();
+        if (n === 2)
+            return new EditInfo("Absorption (0-0.25)", this.absorption, 0, .25).setDimensionless();
         return null;
     }
 
@@ -58,8 +64,10 @@ export class GradientBox extends RectDragObject {
             this.speedIndex = MediumBox.getRefractiveIndex(ei.value);
         if (n === 1)
             this.speedIndex2 = MediumBox.getRefractiveIndex(ei.value);
+        if (n === 2)
+            this.absorption = Math.min(.25, Math.max(0, ei.value));
     }
 
     getDumpType(): number { return "g".charCodeAt(0); }
-    dump(): string { return super.dump() + " " + this.speedIndex + " " + this.speedIndex2; }
+    dump(): string { return super.dump() + " " + this.speedIndex + " " + this.speedIndex2 + " " + this.absorption; }
 }

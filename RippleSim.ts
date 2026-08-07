@@ -188,6 +188,7 @@ export class RippleSim {
 
     wallColor!: Color; posColor!: Color; negColor!: Color; zeroColor!: Color;
     medColor!: Color; posMedColor!: Color; negMedColor!: Color; sourceColor!: Color;
+    absorbColor!: Color;
     schemeColors: Color[][] = [];
     dragPoint: Point | null = null;
     pokePoint: Point | null = null;
@@ -255,12 +256,12 @@ export class RippleSim {
     static setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void {
         renderer.setTransform(a, b, c, d, e, f);
     }
-    static drawSolidEllipse(x1: number, y1: number, rx: number, ry: number, med: number): void {
-        renderer.drawSolidEllipse(x1, y1, rx, ry, med);
+    static drawSolidEllipse(x1: number, y1: number, rx: number, ry: number, med: number, absorb?: number): void {
+        renderer.drawSolidEllipse(x1, y1, rx, ry, med, absorb);
     }
     static drawMedium(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, x4: number, y4: number,
-        med: number, med2: number): void {
-        renderer.drawMedium(x1, y1, x2, y2, x3, y3, x4, y4, med, med2);
+        med: number, med2: number, absorb1?: number, absorb2?: number): void {
+        renderer.drawMedium(x1, y1, x2, y2, x3, y3, x4, y4, med, med2, absorb1, absorb2);
     }
     static drawModes(x1: number, y1: number, x2: number, y2: number, a: number, b: number, c: number, d: number): void {
         renderer.drawModes(x1, y1, x2, y2, a, b, c, d);
@@ -272,8 +273,8 @@ export class RippleSim {
     static doBlankWalls(): void { renderer.doBlankWalls(); }
     static readPixelsWorks(): boolean { return renderer.readPixelsWorks; }
     static setColors(wallColor: number, posColor: number, negColor: number, zeroColor: number, posMedColor: number,
-        negMedColor: number, medColor: number, sourceColor: number, zeroColor3d: number): void {
-        renderer.setColors(wallColor, posColor, negColor, zeroColor, posMedColor, negMedColor, medColor, sourceColor, zeroColor3d);
+        negMedColor: number, medColor: number, sourceColor: number, zeroColor3d: number, absorbColor: number): void {
+        renderer.setColors(wallColor, posColor, negColor, zeroColor, posMedColor, negMedColor, medColor, sourceColor, zeroColor3d, absorbColor);
     }
     static setDamping(d: number): void { renderer.setDamping(d); }
 
@@ -1032,23 +1033,24 @@ export class RippleSim {
         this.negMedColor = this.schemeColors[cn][5];
         this.medColor = this.schemeColors[cn][6];
         this.sourceColor = this.schemeColors[cn][7];
+        this.absorbColor = this.schemeColors[cn][8];
         let zerocol3d = this.zeroColor.toInteger();
         if (zerocol3d === 0)
             zerocol3d = 0x808080;
         RippleSim.setColors(this.wallColor.toInteger(), this.posColor.toInteger(), this.negColor.toInteger(),
             this.zeroColor.toInteger(), this.posMedColor.toInteger(), this.negMedColor.toInteger(),
-            this.medColor.toInteger(), this.sourceColor.toInteger(), zerocol3d);
+            this.medColor.toInteger(), this.sourceColor.toInteger(), zerocol3d, this.absorbColor.toInteger());
     }
 
     addDefaultColorScheme(): void {
         const schemes = [
-            "#808080 #00ffff #000000 #008080 #0000ff #000000 #000080 #ffffff",
-            "#808080 #00ff00 #ff0000 #000000 #00ffff #ff00ff #0000ff #0000ff",
-            "#800000 #00ffff #0000ff #000000 #80c8c8 #8080c8 #808080 #ffffff",
-            "#800000 #ffffff #000000 #808080 #0000ff #000000 #000080 #00ff00",
-            "#800000 #ffff00 #0000ff #000000 #ffff80 #8080ff #808080 #ffffff",
-            "#808080 #00ff00 #ff0000 #FFFFFF #00ffff #ff00ff #0000ff #0000ff",
-            "#FF0000 #00FF00 #0000FF #FFFF00 #00FFFF #FF00FF #FFFFFF #000000",
+            "#808080 #00ffff #000000 #008080 #0000ff #000000 #000080 #ffffff #ffff00",
+            "#808080 #00ff00 #ff0000 #000000 #00ffff #ff00ff #0000ff #0000ff #ffff00",
+            "#800000 #00ffff #0000ff #000000 #80c8c8 #8080c8 #808080 #ffffff #ffff00",
+            "#800000 #ffffff #000000 #808080 #0000ff #000000 #000080 #00ff00 #ffff00",
+            "#800000 #ffff00 #0000ff #000000 #ffff80 #8080ff #808080 #ffffff #ff8000",
+            "#808080 #00ff00 #ff0000 #FFFFFF #00ffff #ff00ff #0000ff #0000ff #ffff00",
+            "#FF0000 #00FF00 #0000FF #FFFF00 #00FFFF #FF00FF #FFFFFF #000000 #FFA500",
         ];
         for (const s of schemes)
             this.decodeColorScheme(s);
@@ -1059,7 +1061,7 @@ export class RippleSim {
         const cn = this.colorChooser.getItemCount();
         this.schemeColors[cn] = [];
         while (st.hasMoreTokens()) {
-            for (let i = 0; i !== 8; i++)
+            for (let i = 0; i !== 9; i++)
                 this.schemeColors[cn][i] = Color.hex2Rgb(st.nextToken());
         }
         this.colorChooser.add("Color Scheme " + (cn + 1));
