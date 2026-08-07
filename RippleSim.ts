@@ -566,6 +566,7 @@ export class RippleSim {
 
         // File menu
         const file = this.makeMenuButton(this.menuBarEl, "File");
+        this.addMenuItem(file.dropdown, { label: "New", action: () => this.menuPerformed("file", "new") });
         this.importFromLocalFileItem = this.addMenuItem(file.dropdown, { label: "Open File...", action: () => this.menuPerformed("file", "importfromlocalfile") });
         this.importFromLocalFileItem.disabled = !LoadFile.isSupported();
         this.addMenuItem(file.dropdown, { label: "Import From Text...", action: () => this.menuPerformed("file", "importfromtext") });
@@ -670,6 +671,8 @@ export class RippleSim {
     menuPerformed(menu: string, item: string): void {
         if (item === "about")
             this.aboutBox = new AboutBox(this.versionString);
+        if (item === "new")
+            this.doNew();
         if (item === "importfromlocalfile") {
             this.pushUndo();
             this.loadFileInput?.click();
@@ -997,6 +1000,14 @@ export class RippleSim {
     resetTime(): void {
         this.t = 0;
         this.iters = 0;
+    }
+
+    doNew(): void {
+        this.pushUndo();
+        this.resetTime();
+        RippleSim.doBlank();
+        this.deleteAllObjects();
+        this.enableDisableUI();
     }
 
     doSetup(): void {
