@@ -116,6 +116,7 @@ export class RippleSim {
     static readonly timeStep = .25;
     static readonly MENUBARHEIGHT = 30;
     static readonly MAXVERTICALPANELWIDTH = 166;
+    static readonly SIDEBAR_PADDING = 4; // must match #sidebar padding in style.css
     static readonly FASTTIMER = 33;
 
     static editDialog: EditDialog | null = null;
@@ -296,11 +297,12 @@ export class RippleSim {
         if (this.sidebarEl)
             this.sidebarEl.style.width = this.verticalPanelWidth + "px";
         if (this.resBar) {
-            this.resBar.setWidth(this.verticalPanelWidth);
-            this.dampingBar.setWidth(this.verticalPanelWidth);
-            this.speedBar.setWidth(this.verticalPanelWidth);
-            this.freqBar.setWidth(this.verticalPanelWidth);
-            this.brightnessBar.setWidth(this.verticalPanelWidth);
+            const barWidth = this.verticalPanelWidth - RippleSim.SIDEBAR_PADDING * 2;
+            this.resBar.setWidth(barWidth);
+            this.dampingBar.setWidth(barWidth);
+            this.speedBar.setWidth(barWidth);
+            this.freqBar.setWidth(barWidth);
+            this.brightnessBar.setWidth(barWidth);
         }
         if (this.cv) {
             this.cv.style.width = width + "px";
@@ -451,11 +453,12 @@ export class RippleSim {
         this.brightnessBar = new Scrollbar(Scrollbar.HORIZONTAL, 27, 1, 1, 1200);
         this.sidebarEl.appendChild(this.brightnessBar.element);
 
-        this.resBar.setWidth(this.verticalPanelWidth);
-        this.dampingBar.setWidth(this.verticalPanelWidth);
-        this.speedBar.setWidth(this.verticalPanelWidth);
-        this.freqBar.setWidth(this.verticalPanelWidth);
-        this.brightnessBar.setWidth(this.verticalPanelWidth);
+        const barWidth = this.verticalPanelWidth - RippleSim.SIDEBAR_PADDING * 2;
+        this.resBar.setWidth(barWidth);
+        this.dampingBar.setWidth(barWidth);
+        this.speedBar.setWidth(barWidth);
+        this.freqBar.setWidth(barWidth);
+        this.brightnessBar.setWidth(barWidth);
 
         this.createMenus();
 
