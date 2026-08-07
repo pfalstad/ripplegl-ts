@@ -37,6 +37,8 @@ export class EditOptions implements Editable {
             return this.offsetEditInfo = new EditInfo("Absorbing area width", this.sim.windowOffsetX, 0, 0).setDimensionless();
         if (n === 2)
             return new EditInfo("Screen width scale (m)", this.sim.lengthScale * this.sim.windowWidth, 0, 0);
+        if (n === 3)
+            return new EditInfo("Mouse snap grid size (m, 0 = off)", this.sim.snapGridSize * this.sim.lengthScale, 0, 0);
         return null;
     }
 
@@ -50,5 +52,7 @@ export class EditOptions implements Editable {
             this.sim.setResolution(this.sim.windowWidth, Math.trunc(ei.value));
         if (n === 2)
             this.sim.lengthScale = ei.value / this.sim.windowWidth;
+        if (n === 3 && ei.value >= 0)
+            this.sim.snapGridSize = Math.trunc(ei.value / this.sim.lengthScale);
     }
 }

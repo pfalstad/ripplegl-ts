@@ -139,6 +139,7 @@ export class RippleSim {
     windowOffsetY = 0;
     windowBottom = 0;
     windowRight = 0;
+    snapGridSize = 0; // 0 = snap-to-grid disabled
 
     blankButton!: HTMLButtonElement;
     stoppedCheck!: Checkbox;
@@ -1160,7 +1161,8 @@ export class RippleSim {
 
     dumpLayout(): string {
         let dump = "$ 3 " + this.windowWidth + " " + this.windowOffsetX + " " + this.dampingBar.getValue() + " " +
-            this.waveChooser.getSelectedIndex() + " " + this.brightnessBar.getValue() + " " + this.lengthScale + "\n";
+            this.waveChooser.getSelectedIndex() + " " + this.brightnessBar.getValue() + " " + this.lengthScale + " " +
+            this.snapGridSize + "\n";
         for (const obj of this.dragObjects)
             dump += obj.dump() + "\n";
         return dump;
@@ -1202,6 +1204,8 @@ export class RippleSim {
                     this.setWaveType();
                     this.brightnessBar.setValue(parseInt(st.nextToken()));
                     this.lengthScale = parseFloat(st.nextToken());
+                    if (st.hasMoreTokens())
+                        this.snapGridSize = parseInt(st.nextToken());
                     continue;
                 }
                 if (tint >= '0'.charCodeAt(0) && tint <= '9'.charCodeAt(0))
@@ -1248,6 +1252,16 @@ export class RippleSim {
         return new Point(xp, yp);
     }
 
+    // used only when actually repositioning objects/handles, not for hit-testing,
+    // so objects between grid points can still be selected
+    snapPoint(p: Point): Point {
+        if (this.snapGridSize <= 0)
+            return p;
+        const x = Math.round(p.x / this.snapGridSize) * this.snapGridSize;
+        const y = Math.round(p.y / this.snapGridSize) * this.snapGridSize;
+        return new Point(x, y);
+    }
+
     getRealTime(): number {
         return this.t / (2 * Math.PI * this.waveSpeed / Source.freqScale / this.lengthScale);
     }
@@ -1287,7 +1301,7 @@ export class RippleSim {
         }
         const p = this.eventPos(event);
         const x = p.x, y = p.y;
-        this.dragPoint = this.getPointFromEvent(event);
+        this.dragPoint = this.snapPoint(this.getPointFromEvent(event));
         this.dragStartX = this.dragX = x;
         this.dragStartY = this.dragY = y;
 
@@ -1412,12 +1426,14 @@ export class RippleSim {
         }
         this.dragging = true;
 
-        const pt = this.getPointFromEvent(event);
+        const rawPt = this.getPointFromEvent(event);
         if (this.draggingHandle != null) {
+            const pt = this.snapPoint(rawPt);
             const mp = this.selectedObject!.inverseTransformPoint(pt);
             this.draggingHandle.dragTo(mp.x, mp.y);
             this.changedWalls = true;
         } else if (this.isSelection()) {
+            const pt = this.snapPoint(rawPt);
             if (this.dragPoint!.x !== pt.x || this.dragPoint!.y !== pt.y) {
                 for (const obj of this.dragObjects) {
                     if (obj.isSelected())
@@ -1427,11 +1443,11 @@ export class RippleSim {
                 this.changedWalls = true;
             }
         } else if (this.rulerStart != null) {
-            this.rulerEnd = pt;
+            this.rulerEnd = rawPt;
         } else {
             if (this.pokePoint != null)
-                this.pokePoint = pt;
-            RippleSim.drawPoke(pt.x, pt.y, this.pokeValue);
+                this.pokePoint = rawPt;
+            RippleSim.drawPoke(rawPt.x, rawPt.y, this.pokeValue);
         }
     }
 
