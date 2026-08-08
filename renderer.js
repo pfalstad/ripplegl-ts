@@ -45,7 +45,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     }
 
 
-    var shaderProgramMain, shaderProgramFixed, shaderProgramAcoustic, shaderProgramDraw, shaderProgramDrawLine, shaderProgramMode, shaderProgramPoke, shaderProgram3D;
+    var shaderProgramMain, shaderProgramFixed, shaderProgramAcoustic, shaderProgramDraw, shaderProgramDrawLine, shaderProgramMode, shaderProgramPoke, shaderProgram3D, shaderProgramImage;
 
     function initShader(fs, vs, prefix) {
         var fragmentShader = getShader(gl, fs, prefix);
@@ -96,6 +96,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     	shaderProgramAcoustic.stepSizeYUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeY");
 
     	shaderProgramDraw = initShader("shader-draw-fs", "shader-draw-vs");
+    	shaderProgramImage = initShader("shader-draw-image-fs", "shader-draw-image-vs");
     	shaderProgramDrawLine = initShader("shader-draw-line-fs", "shader-draw-vs");
     	shaderProgramMode = initShader("shader-mode-fs", "shader-draw-vs");
     	shaderProgramPoke = initShader("shader-poke-fs", "shader-vs");
@@ -816,6 +817,76 @@ var transform = [1, 0, 0, 1, 0, 0];
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
+    // GL textures uploaded for imported images, keyed by the source canvas so we
+    // only re-upload when the canvas identity changes (not every prepare() call)
+    var imageTextureCache = (typeof WeakMap !== "undefined") ? new WeakMap() : null;
+    var imageTexCoordBuffer;
+
+    function getImageTexture(source) {
+    	var texture = imageTextureCache && imageTextureCache.get(source);
+    	if (texture)
+    		return texture;
+    	texture = gl.createTexture();
+    	gl.bindTexture(gl.TEXTURE_2D, texture);
+    	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    	gl.bindTexture(gl.TEXTURE_2D, null);
+    	if (imageTextureCache)
+    		imageTextureCache.set(source, texture);
+    	return texture;
+    }
+
+    function deleteImageTexture(source) {
+    	var texture = imageTextureCache && imageTextureCache.get(source);
+    	if (texture) {
+    		gl.deleteTexture(texture);
+    		imageTextureCache.delete(source);
+    	}
+    }
+
+    // draws an imported image (canvas) into the quad x,y..x4,y4 (same corner order as
+    // drawMedium: top-left, top-right, bottom-left, bottom-right), writing directly into
+    // the blue/alpha (medium/absorption) channels via the shader-draw-image-fs shader
+    function drawImageMedium(x, y, x2, y2, x3, y3, x4, y4, source) {
+		var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		gl.colorMask(false, false, true, true);
+        gl.useProgram(shaderProgramImage);
+
+        var texture = getImageTexture(source);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.uniform1i(shaderProgramImage.samplerUniform, 0);
+
+        var posCoords = [x, y, x2, y2, x3, y3, x4, y4];
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posCoords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramImage.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        if (!imageTexCoordBuffer)
+        	imageTexCoordBuffer = gl.createBuffer();
+        var texCoords = [0, 0, 1, 0, 0, 1, 1, 1];
+        gl.bindBuffer(gl.ARRAY_BUFFER, imageTexCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramImage.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+
+        loadMatrix(pMatrix);
+        setMatrixUniforms(shaderProgramImage);
+        gl.enableVertexAttribArray(shaderProgramImage.vertexPositionAttribute);
+        gl.enableVertexAttribArray(shaderProgramImage.textureCoordAttribute);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disableVertexAttribArray(shaderProgramImage.vertexPositionAttribute);
+        gl.disableVertexAttribArray(shaderProgramImage.textureCoordAttribute);
+
+		gl.colorMask(true, true, true, true);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
     function drawModes(x, y, x2, y2, a, b, c, d) {
 		var rttFramebuffer = renderTexture1.framebuffer;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
@@ -1039,6 +1110,8 @@ var transform = [1, 0, 0, 1, 0, 0];
     	renderer.drawEllipse = function (x, y, x2, y2, m) { drawEllipse(x, y, x2, y2); }
     	renderer.drawSolidEllipse = function (x, y, x2, y2, m, absorb) { drawSolidEllipse(x, y, x2, y2, m, absorb); }
     	renderer.drawMedium = function (x, y, x2, y2, x3, y3, x4, y4, m, m2, a1, a2) { drawMedium(x, y, x2, y2, x3, y3, x4, y4, m, m2, a1, a2); }
+    	renderer.drawImageMedium = function (x, y, x2, y2, x3, y3, x4, y4, source) { drawImageMedium(x, y, x2, y2, x3, y3, x4, y4, source); }
+    	renderer.deleteImageTexture = function (source) { deleteImageTexture(source); }
     	renderer.drawTriangle = function (x, y, x2, y2, x3, y3, m) { drawTriangle(x, y, x2, y2, x3, y3, m); }
     	renderer.drawModes = function (x, y, x2, y2, a, b, c, d) { drawModes(x, y, x2, y2, a, b, c, d); }
     	renderer.setTransform = function (a, b, c, d, e, f) {

@@ -87,6 +87,61 @@
     }
 </script>
 
+<script id="shader-draw-image-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec2 aTextureCoord;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    varying vec2 vTextureCoord;
+
+    void main(void) {
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vTextureCoord = aTextureCoord;
+    }
+</script>
+
+<script id="shader-draw-image-fs" type="x-shader/x-fragment">
+    precision highp float;
+
+    varying vec2 vTextureCoord;
+    uniform sampler2D uSampler;
+
+    // maps an imported image onto the blue/alpha (medium/absorption) channels:
+    // white -> normal/transparent, black -> wall (med=0), shades of blue -> medium.
+    // Grayscale pixels (including anti-aliasing along edges) must NOT be read as
+    // blue, so a pixel only counts as "blue" once its blue channel clearly
+    // exceeds red/green; otherwise it's treated as a wall/normal pixel based on
+    // brightness alone.
+    //
+    // for blue pixels, refractive index n runs from 1 (white/pale blue) to 2
+    // (pure blue) -- the same range MediumBox exposes -- and the stored medium
+    // value is 1/(n*n), matching how MediumBox derives its speed index from a
+    // refractive index. This naturally keeps med in (0.25, 1], so it never
+    // collapses to 0.0, which the simulator reserves for actual walls.
+    //
+    // white/normal areas are left untouched (discarded rather than writing
+    // med=1) so that when images overlap, a white area on top doesn't erase a
+    // wall or medium placed by an image underneath it.
+    void main(void) {
+        vec4 texColor = texture2D(uSampler, vTextureCoord);
+        float blueness = texColor.b - max(texColor.r, texColor.g);
+        float med;
+        if (blueness > 0.08) {
+            float purity = min(texColor.r, texColor.g); // 0 = pure blue, 1 = pale/white-blue
+            float n = mix(2.0, 1.0, purity);
+            med = 1.0 / (n * n);
+        } else {
+            float gray = (texColor.r + texColor.g + texColor.b) / 3.0;
+            if (gray >= 0.5)
+                discard;
+            med = 0.0;
+        }
+        gl_FragColor = vec4(0.0, 0.0, med, 1.0);
+    }
+</script>
+
 <script id="shader-draw-line-fs" type="x-shader/x-fragment">
     precision highp float;
 

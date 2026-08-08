@@ -45,6 +45,7 @@ import { Cavity } from "./Cavity";
 import { MediumEllipse } from "./MediumEllipse";
 import { Ellipse } from "./Ellipse";
 import { SolidBox } from "./SolidBox";
+import { Image } from "./Image";
 import { MovingWall } from "./MovingWall";
 import { MovingSource } from "./MovingSource";
 import { ModeBox } from "./ModeBox";
@@ -200,6 +201,7 @@ export class RippleSim {
     pokeValue = 0;
 
     loadFileInput: LoadFile | null = null;
+    imageFileInputEl: HTMLInputElement | null = null;
     ripArea!: Rectangle;
     clipboard = "";
     undoStack: string[] = [];
@@ -266,6 +268,11 @@ export class RippleSim {
         med: number, med2: number, absorb1?: number, absorb2?: number): void {
         renderer.drawMedium(x1, y1, x2, y2, x3, y3, x4, y4, med, med2, absorb1, absorb2);
     }
+    static drawImageMedium(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, x4: number, y4: number,
+        source: HTMLCanvasElement): void {
+        renderer.drawImageMedium(x1, y1, x2, y2, x3, y3, x4, y4, source);
+    }
+    static deleteImageTexture(source: HTMLCanvasElement): void { renderer.deleteImageTexture(source); }
     static drawModes(x1: number, y1: number, x2: number, y2: number, a: number, b: number, c: number, d: number): void {
         renderer.drawModes(x1, y1, x2, y2, a, b, c, d);
     }
@@ -422,6 +429,15 @@ export class RippleSim {
             this.sidebarEl.appendChild(this.loadFileInput.element);
         }
 
+        if (LoadFile.isSupported()) {
+            this.imageFileInputEl = document.createElement("input");
+            this.imageFileInputEl.type = "file";
+            this.imageFileInputEl.accept = "image/*";
+            this.imageFileInputEl.className = "offScreen";
+            this.imageFileInputEl.addEventListener("change", () => this.onImageFileSelected());
+            this.sidebarEl.appendChild(this.imageFileInputEl);
+        }
+
         const addLabel = (text: string): HTMLElement => {
             const l = document.createElement("div");
             l.textContent = text;
@@ -557,6 +573,7 @@ export class RippleSim {
             { label: "Add Multipole Source", action: () => this.menuPerformed("main", "MultipoleSource") },
             { label: "Add Phased Array Source", action: () => this.menuPerformed("main", "PhasedArraySource") },
             { label: "Add Solid Box", action: () => this.menuPerformed("main", "SolidBox") },
+            { label: "Add Image...", action: () => this.menuPerformed("main", "Image") },
             { label: "Add Moving Wall", action: () => this.menuPerformed("main", "MovingWall") },
             { label: "Add Moving Source", action: () => this.menuPerformed("main", "MovingSource") },
             { label: "Add Cavity", action: () => this.menuPerformed("main", "Cavity") },
@@ -724,6 +741,13 @@ export class RippleSim {
         if (item === "rotate" && this.selectedObject != null && this.selectedObject.canRotate())
             this.rotationMode = true;
 
+        if (item === "Image") {
+            if (this.imageFileInputEl == null)
+                alert("Not supported in this browser.");
+            else
+                this.imageFileInputEl.click();
+        }
+
         let newObject: DragObject | null = null;
         if (item === "Wall") newObject = new Wall();
         if (item === "Box") newObject = new Box();
@@ -787,6 +811,7 @@ export class RippleSim {
         if (tint === 201) return new PhasedArraySource(st);
         if (tint === 203) return new Slit(st);
         if (tint === 202) return new SolidBox(st);
+        if (tint === 205) return new Image(st);
         if (tint === 's'.charCodeAt(0)) return new Source(st, 1);
         if (tint === 't'.charCodeAt(0)) return new TrianglePrism(st);
         if (tint === 'w'.charCodeAt(0)) return new Wall(st);
@@ -812,6 +837,20 @@ export class RippleSim {
     doExportAsText(): void {
         const dump = this.dumpLayout();
         this.exportAsTextDialog = new ExportAsTextDialog(this, dump);
+    }
+
+    onImageFileSelected(): void {
+        const files = this.imageFileInputEl?.files;
+        if (files && files.length >= 1) {
+            this.pushUndo();
+            const obj = Image.fromFile(files[0]);
+            obj.setInitialPosition();
+            this.dragObjects.push(obj);
+            this.setSelectedObject(obj);
+            this.preserveSelection = true;
+            this.changedWalls = true;
+        }
+        this.imageFileInputEl!.value = "";
     }
 
     doExportAsLocalFile(): void {
