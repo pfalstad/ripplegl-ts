@@ -918,7 +918,7 @@ export class RippleSim {
             for (const obj of this.dragObjects) {
                 RippleSim.setDrawingColor(1, 1, 0, .5);
                 if (obj.selected)
-                    RippleSim.setDrawingSelection(.6 + .4 * Math.sin(this.t * .2));
+                    RippleSim.setDrawingSelection(.6 + .4 * Math.sin(Date.now() * .008));
                 else
                     RippleSim.setDrawingSelection(-1);
                 const xform = obj.transform!;
