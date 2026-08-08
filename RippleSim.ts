@@ -1664,6 +1664,9 @@ export class RippleSim {
         this.closeContextPanel();
         const panel = document.createElement("div");
         panel.className = "context-menu";
+        // hidden while we build it, so we can measure its real size below without
+        // it flashing at the (possibly off-screen) unclamped position first
+        panel.style.visibility = "hidden";
         document.body.appendChild(panel);
         this.contextPanel = panel;
 
@@ -1679,8 +1682,6 @@ export class RippleSim {
                 item.addEventListener("click", () => { this.closeContextPanel(); d.action!(); });
                 panel.appendChild(item);
             }
-            panel.style.left = this.menuX + "px";
-            panel.style.top = this.menuY + "px";
         } else {
             for (const d of this.mainMenuItems) {
                 const item = document.createElement("button");
@@ -1689,11 +1690,17 @@ export class RippleSim {
                 item.addEventListener("click", () => { this.closeContextPanel(); d.action!(); });
                 panel.appendChild(item);
             }
-            const x = Math.max(0, Math.min(this.menuX, this.cv.width - 400));
-            const y = Math.max(0, Math.min(this.menuY, this.cv.height - 450));
-            panel.style.left = x + "px";
-            panel.style.top = y + "px";
         }
+
+        // clamp against the panel's actual rendered size and the viewport (the panel
+        // is position:fixed), rather than guessing a size, so it can't get cut off
+        // regardless of how many items it has or where on the page it opens
+        const rect = panel.getBoundingClientRect();
+        const x = Math.max(0, Math.min(this.menuX, window.innerWidth - rect.width));
+        const y = Math.max(0, Math.min(this.menuY, window.innerHeight - rect.height));
+        panel.style.left = x + "px";
+        panel.style.top = y + "px";
+        panel.style.visibility = "";
 
         const closeOnOutside = (ev: MouseEvent) => {
             if (this.contextPanel && !this.contextPanel.contains(ev.target as Node)) {
