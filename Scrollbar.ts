@@ -164,6 +164,16 @@ export class Scrollbar {
     onMouseMove(e: MouseEvent): void {
         e.preventDefault();
         if (this.enabled && this.dragging) {
+            // if the mouse button was released while the pointer was outside this
+            // canvas, our mouseup listener never sees it, leaving "dragging" stuck
+            // true; e.buttons lets us notice that once the mouse comes back over the
+            // scrollbar and clear it, instead of jumping the thumb to wherever the
+            // mouse re-enters
+            if (e.buttons === 0) {
+                this.dragging = false;
+                this.draw();
+                return;
+            }
             this.val = this.calcValueFromPos(this.offsetX(e));
             this.draw();
             if (this.command) this.command();
