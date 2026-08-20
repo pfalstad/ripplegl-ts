@@ -40,9 +40,20 @@ export class EditInfo {
     dimensionless = false;
     noCenti = false;
 
+    // slider (Adjustable) support
+    minVal: number;
+    maxVal: number;
+    noSliders = false;
+    minBox: HTMLInputElement | null = null;
+    maxBox: HTMLInputElement | null = null;
+    labelBox: HTMLInputElement | null = null;
+    stepBox: HTMLInputElement | null = null;
+
     constructor(n: string, val: number, mn: number = 0, mx: number = 0) {
         this.name = n;
         this.value = val;
+        this.minVal = mn;
+        this.maxVal = mx;
         this.forceLargeM = n.indexOf("(ohms)") > 0 || n.indexOf("(Hz)") > 0;
     }
 
@@ -54,5 +65,16 @@ export class EditInfo {
     setNoCenti(): EditInfo {
         this.noCenti = true;
         return this;
+    }
+
+    disallowSliders(): EditInfo {
+        this.noSliders = true;
+        return this;
+    }
+
+    // whether an Adjustable (slider) can be created for this edit item
+    canCreateAdjustable(): boolean {
+        return this.choice == null && this.checkbox == null && this.button == null &&
+            this.textArea == null && !this.noSliders;
     }
 }

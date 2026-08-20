@@ -122,7 +122,16 @@ export class EditDialog {
     }
 
     unitString(ei: EditInfo): string {
-        const v = ei.value;
+        return EditDialog.formatUnits(ei, ei.value);
+    }
+
+    parseUnits(ei: EditInfo): number {
+        return EditDialog.parseUnitsStr(ei, ei.textf!.value);
+    }
+
+    // format a value using the same unit-suffix convention as unitString(), but for an
+    // arbitrary value rather than ei.value; used by SliderDialog for its min/max/step boxes.
+    static formatUnits(ei: EditInfo, v: number): string {
         const va = Math.abs(v);
         if (ei.dimensionless)
             return formatNoComma(v);
@@ -140,8 +149,10 @@ export class EditDialog {
         return formatNoComma(v * 1e-12) + "T";
     }
 
-    parseUnits(ei: EditInfo): number {
-        let s = ei.textf!.value.trim();
+    // parse a value using the same unit-suffix convention as parseUnits(), but from an
+    // arbitrary string rather than ei.textf's value; used by SliderDialog for its min/max/step boxes.
+    static parseUnitsStr(ei: EditInfo, str: string): number {
+        let s = str.trim();
         s = s.replace(/([0-9]+)([pPnNuUmMkKgG])([0-9]+)/, "$1.$3$2");
         const len = s.length;
         const uc = s.charAt(len - 1);

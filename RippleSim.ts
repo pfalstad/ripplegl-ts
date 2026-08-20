@@ -59,6 +59,8 @@ import { PhasedArraySource } from "./PhasedArraySource";
 import { MultipoleSource } from "./MultipoleSource";
 import { RotatingSource } from "./RotatingSource";
 import { Slit } from "./Slit";
+import { Adjustable } from "./Adjustable";
+import { SliderDialog } from "./SliderDialog";
 
 // the WebGL renderer, defined in renderer.js (loaded as a classic <script>).
 // `passCanvas` returns an object with all the drawing/solver callbacks used below.
@@ -184,6 +186,8 @@ export class RippleSim {
     mouseWheelAccum = 0;
 
     editDialog: EditDialog | null = null;
+    sliderDialog: SliderDialog | null = null;
+    adjustables: Adjustable[] = [];
     exportAsUrlDialog: ExportAsUrlDialog | null = null;
     exportAsTextDialog: ExportAsTextDialog | null = null;
     exportAsLocalFileDialog: ExportAsLocalFileDialog | null = null;
@@ -219,6 +223,7 @@ export class RippleSim {
     exportAsLocalFileItem!: HTMLButtonElement;
     elmEditMenuItem!: MenuItemDesc;
     elmRotateMenuItem!: MenuItemDesc;
+    elmSliderMenuItem!: MenuItemDesc;
     mainMenuItems: MenuItemDesc[] = [];
     elmMenuItems: MenuItemDesc[] = [];
 
@@ -630,6 +635,7 @@ export class RippleSim {
         // element context menu descriptors (used for canvas right-click / long-press when object selected)
         this.elmEditMenuItem = { label: "Edit", action: () => this.menuPerformed("elm", "edit") };
         this.elmRotateMenuItem = { label: "Rotate", action: () => this.menuPerformed("elm", "rotate") };
+        this.elmSliderMenuItem = { label: "Sliders...", action: () => this.menuPerformed("elm", "sliders") };
         this.elmMenuItems = [
             this.elmEditMenuItem,
             { label: "Cut", action: () => this.menuPerformed("elm", "cut") },
@@ -637,6 +643,7 @@ export class RippleSim {
             { label: "Delete", action: () => this.menuPerformed("elm", "delete") },
             this.elmRotateMenuItem,
             { label: "Duplicate", action: () => this.menuPerformed("elm", "duplicate") },
+            this.elmSliderMenuItem,
         ];
 
         document.addEventListener("keydown", (e) => this.onKeyDown(e));
@@ -740,6 +747,8 @@ export class RippleSim {
         if (item === "edit") this.doEdit(this.selectedObject!);
         if (item === "rotate" && this.selectedObject != null && this.selectedObject.canRotate())
             this.rotationMode = true;
+        if (item === "sliders" && this.selectedObject != null)
+            this.doSliders(this.selectedObject);
 
         if (item === "Image") {
             if (this.imageFileInputEl == null)
@@ -827,6 +836,54 @@ export class RippleSim {
             this.editDialog = null;
         }
         this.editDialog = new EditDialog(eable, this);
+    }
+
+    doSliders(obj: DragObject): void {
+        this.clearSelection();
+        this.pushUndo();
+        if (this.sliderDialog != null) {
+            this.sliderDialog.closeDialog();
+            this.sliderDialog = null;
+        }
+        this.sliderDialog = new SliderDialog(obj, this);
+    }
+
+    // whether the user can create sliders for this object
+    sliderItemEnabled(obj: DragObject): boolean {
+        for (let i = 0; ; i++) {
+            const ei = obj.getEditInfo(i);
+            if (ei == null)
+                return false;
+            if (ei.canCreateAdjustable())
+                return true;
+        }
+    }
+
+    findAdjustable(obj: DragObject, item: number): Adjustable | null {
+        for (const adj of this.adjustables) {
+            if (adj.elm === obj && adj.editItem === item)
+                return adj;
+        }
+        return null;
+    }
+
+    deleteSliders(obj: DragObject): void {
+        for (let i = this.adjustables.length - 1; i >= 0; i--) {
+            const adj = this.adjustables[i];
+            if (adj.elm === obj) {
+                adj.deleteSlider(this);
+                this.adjustables.splice(i, 1);
+            }
+        }
+    }
+
+    addWidgetToVerticalPanel(el: HTMLElement): void {
+        this.sidebarEl.appendChild(el);
+    }
+
+    removeWidgetFromVerticalPanel(el: HTMLElement): void {
+        if (el.parentElement === this.sidebarEl)
+            this.sidebarEl.removeChild(el);
     }
 
     doExportAsUrl(): void {
@@ -1047,6 +1104,9 @@ export class RippleSim {
     deleteAllObjects(): void {
         for (let i = this.dragObjects.length - 1; i >= 0; i--)
             this.dragObjects[i].delete();
+        for (let i = this.adjustables.length - 1; i >= 0; i--)
+            this.adjustables[i].deleteSlider(this);
+        this.adjustables = [];
         this.dragObjects = [];
         this.selectedObject = null;
         RippleSim.doBlankWalls();
@@ -1231,6 +1291,8 @@ export class RippleSim {
             this.snapGridSize + "\n";
         for (const obj of this.dragObjects)
             dump += obj.dump() + "\n";
+        for (const adj of this.adjustables)
+            dump += "a " + adj.dump() + "\n";
         return dump;
     }
 
@@ -1274,6 +1336,13 @@ export class RippleSim {
                         this.snapGridSize = parseInt(st.nextToken());
                     continue;
                 }
+                if (tint === 'a'.charCodeAt(0)) {
+                    const adj = new Adjustable(st, this);
+                    if (adj.elm != null)
+                        this.adjustables.push(adj);
+                    continue;
+                }
+
                 if (tint >= '0'.charCodeAt(0) && tint <= '9'.charCodeAt(0))
                     tint = parseInt(type);
 
@@ -1292,6 +1361,12 @@ export class RippleSim {
             } catch (ee) {
                 this.console("got exception when reading setup");
                 continue;
+            }
+        }
+        if (!retain) {
+            for (let i = this.adjustables.length - 1; i >= 0; i--) {
+                if (!this.adjustables[i].createSlider(this))
+                    this.adjustables.splice(i, 1);
             }
         }
         this.setDamping();
@@ -1669,6 +1744,10 @@ export class RippleSim {
         panel.style.visibility = "hidden";
         document.body.appendChild(panel);
         this.contextPanel = panel;
+        // keep the current selection while the menu is open: without this, moving the
+        // mouse back over empty canvas on the way to a menu item re-triggers doMouseMove's
+        // hover hit-test and clears selectedObject out from under the still-open menu.
+        this.preserveSelection = true;
 
         if (this.selectedObject != null) {
             for (const d of this.elmMenuItems) {
@@ -1679,6 +1758,8 @@ export class RippleSim {
                     item.disabled = this.selectedObject.getEditInfo(0) == null;
                 if (d === this.elmRotateMenuItem)
                     item.disabled = !this.selectedObject.canRotate();
+                if (d === this.elmSliderMenuItem)
+                    item.disabled = !this.sliderItemEnabled(this.selectedObject);
                 item.addEventListener("click", () => { this.closeContextPanel(); d.action!(); });
                 panel.appendChild(item);
             }
@@ -1821,6 +1902,7 @@ export class RippleSim {
             const ce = this.dragObjects[i];
             if (ce.isSelected()) {
                 this.clipboard = ce.dump() + "\n" + this.clipboard;
+                this.deleteSliders(ce);
                 ce.delete();
                 this.dragObjects.splice(i, 1);
             }
@@ -1848,6 +1930,7 @@ export class RippleSim {
         for (let i = this.dragObjects.length - 1; i >= 0; i--) {
             const ce = this.dragObjects[i];
             if (ce.isSelected()) {
+                this.deleteSliders(ce);
                 ce.delete();
                 this.dragObjects.splice(i, 1);
                 hasDeleted = true;
