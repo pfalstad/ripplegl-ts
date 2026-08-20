@@ -35,6 +35,10 @@ export class Scrollbar {
     enabled = true;
     command: (() => void) | null;
 
+    // bound once so add/removeEventListener target the same function reference
+    private boundMouseMove = (e: MouseEvent) => this.onMouseMove(e);
+    private boundMouseUp = (e: MouseEvent) => this.onMouseUp(e);
+
     constructor(_orientation: number, value: number, _visible: number, minimum: number, maximum: number,
         cmd: (() => void) | null = null) {
         this.min = minimum;
@@ -54,8 +58,6 @@ export class Scrollbar {
         this.g.fillStyle = "#ffffff";
 
         this.canvas.addEventListener("mousedown", (e) => this.onMouseDown(e));
-        this.canvas.addEventListener("mouseup", (e) => this.onMouseUp(e));
-        this.canvas.addEventListener("mousemove", (e) => this.onMouseMove(e));
         this.canvas.addEventListener("mouseout", (e) => this.onMouseOut(e));
         this.canvas.addEventListener("wheel", (e) => this.onMouseWheel(e as WheelEvent), { passive: false });
 
@@ -150,9 +152,18 @@ export class Scrollbar {
         } else {
             this.val = this.calcValueFromPos(x);
             this.dragging = true;
+            // like GWT's Event.setCapture(): route mousemove/mouseup through document while
+            // dragging, so the drag keeps tracking the mouse even once it leaves the canvas
+            document.addEventListener("mousemove", this.boundMouseMove);
+            document.addEventListener("mouseup", this.boundMouseUp);
         }
         this.draw();
         if (this.command) this.command();
+    }
+
+    private releaseCapture(): void {
+        document.removeEventListener("mousemove", this.boundMouseMove);
+        document.removeEventListener("mouseup", this.boundMouseUp);
     }
 
     onMouseDown(e: MouseEvent): void {
@@ -164,13 +175,12 @@ export class Scrollbar {
     onMouseMove(e: MouseEvent): void {
         e.preventDefault();
         if (this.enabled && this.dragging) {
-            // if the mouse button was released while the pointer was outside this
-            // canvas, our mouseup listener never sees it, leaving "dragging" stuck
-            // true; e.buttons lets us notice that once the mouse comes back over the
-            // scrollbar and clear it, instead of jumping the thumb to wherever the
-            // mouse re-enters
+            // belt-and-suspenders: if the mouse button was released somewhere that
+            // didn't deliver us a mouseup (e.g. over another window), e.buttons lets
+            // us notice on the next move and stop dragging instead of tracking forever
             if (e.buttons === 0) {
                 this.dragging = false;
+                this.releaseCapture();
                 this.draw();
                 return;
             }
@@ -182,6 +192,7 @@ export class Scrollbar {
 
     onMouseUp(e: MouseEvent): void {
         e.preventDefault();
+        this.releaseCapture();
         if (this.enabled && this.dragging) {
             this.val = this.calcValueFromPos(this.offsetX(e));
             this.dragging = false;
@@ -252,6 +263,7 @@ export class Scrollbar {
     disable(): void {
         this.enabled = false;
         this.dragging = false;
+        this.releaseCapture();
         this.draw();
     }
 }
