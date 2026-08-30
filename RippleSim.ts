@@ -61,6 +61,10 @@ import { RotatingSource } from "./RotatingSource";
 import { Slit } from "./Slit";
 import { Adjustable } from "./Adjustable";
 import { SliderDialog } from "./SliderDialog";
+import { Graphics } from "./Graphics";
+import { Line } from "./Line";
+import { Arrow } from "./Arrow";
+import { Text } from "./Text";
 
 // the WebGL renderer, defined in renderer.js (loaded as a classic <script>).
 // `passCanvas` returns an object with all the drawing/solver callbacks used below.
@@ -131,6 +135,8 @@ export class RippleSim {
     sidebarEl!: HTMLElement;
     cv!: HTMLCanvasElement;
     coordsLabel!: HTMLElement;
+    overlayCv!: HTMLCanvasElement;
+    private overlayCtx!: CanvasRenderingContext2D;
 
     // ==================== simulation state ====================
     winSize!: Dimension;
@@ -323,6 +329,12 @@ export class RippleSim {
             this.cv.width = width;
             this.cv.height = height;
         }
+        if (this.overlayCv) {
+            this.overlayCv.style.width = width + "px";
+            this.overlayCv.style.height = height + "px";
+            this.overlayCv.width = width;
+            this.overlayCv.height = height;
+        }
         if (this.coordsLabel)
             this.coordsLabel.style.top = (height - this.coordsLabel.offsetHeight) + "px";
         const h = Math.trunc(height / 5);
@@ -362,6 +374,11 @@ export class RippleSim {
             this.canvasWrapEl.textContent = "Not working. You need a browser that supports the CANVAS element.";
             return;
         }
+
+        this.overlayCv = document.createElement("canvas");
+        this.overlayCv.className = "overlayCanvas";
+        this.canvasWrapEl.appendChild(this.overlayCv);
+        this.overlayCtx = this.overlayCv.getContext("2d")!;
 
         this.coordsLabel = document.createElement("div");
         this.coordsLabel.className = "coordsLabel";
@@ -592,6 +609,9 @@ export class RippleSim {
             { label: "Add Lens", action: () => this.menuPerformed("main", "Lens") },
             { label: "Add Probe", action: () => this.menuPerformed("main", "Probe") },
             { label: "Add Rotating Source", action: () => this.menuPerformed("main", "RotatingSource") },
+            { label: "Add Line", action: () => this.menuPerformed("main", "Line") },
+            { label: "Add Arrow", action: () => this.menuPerformed("main", "Arrow") },
+            { label: "Add Text", action: () => this.menuPerformed("main", "Text") },
         ];
     }
 
@@ -791,6 +811,9 @@ export class RippleSim {
         if (item === "MultipoleSource") newObject = new MultipoleSource();
         if (item === "RotatingSource") newObject = new RotatingSource();
         if (item === "Slit") newObject = new Slit();
+        if (item === "Line") newObject = new Line();
+        if (item === "Arrow") newObject = new Arrow();
+        if (item === "Text") newObject = new Text();
         if (newObject != null) {
             this.pushUndo();
             newObject.setInitialPosition();
@@ -808,6 +831,9 @@ export class RippleSim {
         if (tint === 'e'.charCodeAt(0)) return new Ellipse(st);
         if (tint === 'g'.charCodeAt(0)) return new GradientBox(st);
         if (tint === 'l'.charCodeAt(0)) return new Lens(st);
+        if (tint === 'L'.charCodeAt(0)) return new Line(st);
+        if (tint === 'A'.charCodeAt(0)) return new Arrow(st);
+        if (tint === 'x'.charCodeAt(0)) return new Text(st);
         if (tint === 'S'.charCodeAt(0)) return new LineSource(st);
         if (tint === 'm'.charCodeAt(0)) return new MediumBox(st);
         if (tint === 'E'.charCodeAt(0)) return new MediumEllipse(st);
@@ -984,6 +1010,7 @@ export class RippleSim {
             }
         RippleSim.setTransform(1, 0, 0, 0, 1, 0);
         RippleSim.setDrawingSelection(-1);
+        this.drawOverlay2D();
         if (this.view3dCheck.getState())
             for (const obj of this.dragObjects)
                 if (obj instanceof Probe)
@@ -997,6 +1024,22 @@ export class RippleSim {
             RippleSim.drawFocus(this.rulerEnd.x, this.rulerEnd.y);
         }
         this.doCoordsLabel();
+    }
+
+    // draw cosmetic objects (LineElm, TextElm) onto the 2D overlay canvas that sits on
+    // top of the WebGL canvas. These objects don't participate in the wave simulation.
+    private drawOverlay2D(): void {
+        const ctx = this.overlayCtx;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, this.overlayCv.width, this.overlayCv.height);
+        if (this.view3dCheck.getState())
+            return;
+        const scale = this.winSize.width / this.windowWidth;
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        const g = new Graphics(ctx);
+        for (const obj of this.dragObjects)
+            obj.draw2D(g);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
 
     // returns a sine-wave Source if all sources in the circuit are sine waves of the same frequency, else null

@@ -23,6 +23,7 @@ import { DragHandle } from "./DragHandle";
 import { Point } from "./Point";
 import { Rectangle } from "./Rectangle";
 import type { Editable, EditInfo } from "./EditInfo";
+import type { Graphics } from "./Graphics";
 
 export abstract class DragObject implements Editable {
     handles: DragHandle[] = [];
@@ -117,6 +118,10 @@ export abstract class DragObject implements Editable {
     }
 
     drawSelection(): void {}
+
+    // draw onto the 2D overlay canvas, in grid coordinates; used by purely cosmetic
+    // objects (e.g. Line, Text, Arrow) that don't affect the wave simulation via prepare().
+    draw2D(_g: Graphics): void {}
 
     rotate(ang: number): void {
         this.rotation += ang;

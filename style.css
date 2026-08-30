@@ -141,6 +141,14 @@ select {
     display: block;
 }
 
+#canvasWrap canvas.overlayCanvas {
+    background-color: transparent;
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
 .coordsLabel {
     position: absolute;
     left: 0;

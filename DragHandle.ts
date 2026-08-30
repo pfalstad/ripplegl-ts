@@ -52,7 +52,7 @@ export class DragHandle {
     }
 
     rescale(scale: number): void {
-        this.x = Math.trunc(this.x * scale);
-        this.y = Math.trunc(this.y * scale);
+        this.x = Math.round(this.x * scale);
+        this.y = Math.round(this.y * scale);
     }
 }
