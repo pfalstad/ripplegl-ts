@@ -534,6 +534,11 @@ var transform = [1, 0, 0, 1, 0, 0];
     function drawLineSource(x, y, x2, y2, f, gauss) {
         gl.useProgram(shaderProgramDrawLine);
 
+        // alpha channel holds per-pixel absorption factor; the line-source shader hardcodes
+        // alpha to 0 in its output (that component is unused by it), so mask it off here to
+        // avoid zeroing out (i.e. maxing out absorption/damping) along the source line
+        gl.colorMask(true, true, true, false);
+
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         srcCoords[0] = x;
         srcCoords[1] = y;
@@ -556,6 +561,8 @@ var transform = [1, 0, 0, 1, 0, 0];
         gl.drawArrays(gl.LINES, 0, 2);
         gl.disableVertexAttribArray(shaderProgramDrawLine.colorAttribute);
         gl.disableVertexAttribArray(shaderProgramDrawLine.vertexPositionAttribute);
+
+        gl.colorMask(true, true, true, true);
     }
 
     function drawPhasedArray(x, y, x2, y2, f1, f2) {
