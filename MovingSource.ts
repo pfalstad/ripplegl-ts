@@ -43,6 +43,25 @@ export class MovingSource extends Source {
 
     dump(): string { return super.dump() + " " + this.moveDuration + " " + this.pauseDuration; }
 
+    setMoveDuration(d: number): void {
+        if (this.phase === 0 || this.phase === 2) {
+            // adjust startIter to maintain continuity in position
+            // even though the move duration has changed, just like
+            // Source.setFrequency() does for freqTimeZero.
+            const olddur = this.moveDuration;
+            this.startIter = this.sim.iters - d * (this.sim.iters - this.startIter) / olddur;
+        }
+        this.moveDuration = d;
+    }
+
+    setPauseDuration(d: number): void {
+        if (this.phase === 1 || this.phase === 3) {
+            const olddur = this.pauseDuration;
+            this.startIter = this.sim.iters - d * (this.sim.iters - this.startIter) / olddur;
+        }
+        this.pauseDuration = d;
+    }
+
     run(): void {
         const dh1 = this.handles[0];
         const dh2 = this.handles[1];
@@ -86,9 +105,9 @@ export class MovingSource extends Source {
 
     setEditValue(n: number, ei: EditInfo): void {
         if (n === 0)
-            this.moveDuration = Math.trunc(ei.value);
+            this.setMoveDuration(Math.trunc(ei.value));
         if (n === 1)
-            this.pauseDuration = Math.trunc(ei.value);
+            this.setPauseDuration(Math.trunc(ei.value));
         super.setEditValue(n - 2, ei);
     }
 
