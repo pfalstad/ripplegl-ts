@@ -22,6 +22,7 @@ import { DragObject } from "./DragObject";
 import { RippleSim } from "./RippleSim";
 import { StringTokenizer } from "./StringTokenizer";
 import { Scrollbar } from "./Scrollbar";
+import { EditDialog } from "./EditDialog";
 
 export class Adjustable {
     elm: DragObject | null;
@@ -108,7 +109,8 @@ export class Adjustable {
         this.labelEl = lbl;
         sim.addWidgetToVerticalPanel(lbl);
         const intValue = this.valueToSliderPosition(value);
-        this.slider = new Scrollbar(Scrollbar.HORIZONTAL, intValue, 1, 0, 100, () => this.execute());
+        this.slider = new Scrollbar(Scrollbar.HORIZONTAL, intValue, 1, 0, 101, () => this.execute(),
+            (pos) => this.formatSliderPosition(pos));
         sim.addWidgetToVerticalPanel(this.slider.element);
         const barWidth = sim.verticalPanelWidth - RippleSim.SIDEBAR_PADDING * 2;
         this.slider.setWidth(barWidth);
@@ -176,6 +178,13 @@ export class Adjustable {
             return Math.exp(logMin + (logMax - logMin) * pos / 100);
         }
         return this.minValue + (this.maxValue - this.minValue) * pos / 100;
+    }
+
+    // format a slider position (0-100) as the display text shown on the slider itself
+    formatSliderPosition(pos: number): string {
+        const value = this.sliderPositionToValue(pos);
+        const ei = this.elm == null ? null : this.elm.getEditInfo(this.editItem);
+        return ei == null ? String(value) : EditDialog.formatUnits(ei, value);
     }
 
     deleteSlider(sim: RippleSim): void {

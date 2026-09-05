@@ -34,17 +34,19 @@ export class Scrollbar {
     dragging = false;
     enabled = true;
     command: (() => void) | null;
+    formatValue: ((v: number) => string) | null;
 
     // bound once so add/removeEventListener target the same function reference
     private boundMouseMove = (e: MouseEvent) => this.onMouseMove(e);
     private boundMouseUp = (e: MouseEvent) => this.onMouseUp(e);
 
     constructor(_orientation: number, value: number, _visible: number, minimum: number, maximum: number,
-        cmd: (() => void) | null = null) {
+        cmd: (() => void) | null = null, formatValue: ((v: number) => string) | null = null) {
         this.min = minimum;
         this.max = maximum - 1;
         this.val = value;
         this.command = cmd;
+        this.formatValue = formatValue;
         this.widthPx = 166;
 
         this.element = document.createElement("div");
@@ -84,7 +86,7 @@ export class Scrollbar {
         const BARMARGIN = Scrollbar.BARMARGIN;
 
         g.font = "15px sans-serif";
-        const valStr = String(this.val);
+        const valStr = this.formatValue ? this.formatValue(this.val) : String(this.val);
         const tw = g.measureText(valStr).width;
 
         g.fillStyle = "#ffffff";
