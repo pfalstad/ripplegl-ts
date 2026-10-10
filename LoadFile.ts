@@ -18,6 +18,7 @@
 */
 
 import type { RippleSim } from "./RippleSim";
+import { ExportAsLocalFileDialog } from "./ExportAsLocalFileDialog";
 
 export class LoadFile {
     element: HTMLInputElement;
@@ -43,14 +44,16 @@ export class LoadFile {
     doLoad(): void {
         const files = this.element.files;
         if (files && files.length >= 1 && files[0].size < 32000) {
+            const file = files[0];
             const reader = new FileReader();
             reader.onload = () => {
                 const text = reader.result as string;
                 this.sim.pushUndo();
                 this.sim.readImport(text);
                 this.sim.createNewLoadFile();
+                ExportAsLocalFileDialog.setLastFileName(file.name);
             };
-            reader.readAsText(files[0]);
+            reader.readAsText(file);
         }
     }
 }

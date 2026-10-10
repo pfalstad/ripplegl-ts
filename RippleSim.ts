@@ -1310,6 +1310,7 @@ export class RippleSim {
     readSetupFile(str: string, _title: string | null): void {
         this.resetTime();
         this.console("reading example " + str);
+        ExportAsLocalFileDialog.setLastFileName(null);
         const url = "examples/" + str + "?v=" + Math.floor(Math.random() * 0x7fffffff);
         this.loadFileFromURL(url);
         this.enableDisableUI();
