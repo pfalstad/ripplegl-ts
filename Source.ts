@@ -210,8 +210,10 @@ export class Source extends DragObject {
                 this.freqTimeZero = this.sim.t - oldfreq * (this.sim.t - this.freqTimeZero) / this.frequency;
             else
                 this.freqTimeZero = 0;
-            this.wavelengthEditInfo!.value = this.getWavelength();
-            EditDialog.theEditDialog!.updateValue(this.wavelengthEditInfo!);
+            if (this.wavelengthEditInfo) {
+                this.wavelengthEditInfo.value = this.getWavelength();
+                EditDialog.theEditDialog?.updateValue(this.wavelengthEditInfo);
+            }
         }
         if (this.isSimpleWaveform()) {
             if (n === 4)
@@ -226,8 +228,10 @@ export class Source extends DragObject {
             // set wavelength
             this.frequency = Source.freqScale * this.sim.lengthScale / ei.value;
             this.enforceMaxFrequency();
-            this.frequencyEditInfo!.value = this.getRealFrequency();
-            EditDialog.theEditDialog!.updateValue(this.frequencyEditInfo!);
+            if (this.frequencyEditInfo) {
+                this.frequencyEditInfo.value = this.getRealFrequency();
+                EditDialog.theEditDialog?.updateValue(this.frequencyEditInfo);
+            }
         }
     }
 
@@ -237,10 +241,14 @@ export class Source extends DragObject {
         if (this.frequency <= maxfreq)
             return;
         this.frequency = maxfreq;
-        this.frequencyEditInfo!.value = this.getRealFrequency();
-        EditDialog.theEditDialog!.updateValue(this.frequencyEditInfo!);
-        this.wavelengthEditInfo!.value = this.getWavelength();
-        EditDialog.theEditDialog!.updateValue(this.wavelengthEditInfo!);
+        if (this.frequencyEditInfo) {
+            this.frequencyEditInfo.value = this.getRealFrequency();
+            EditDialog.theEditDialog?.updateValue(this.frequencyEditInfo);
+        }
+        if (this.wavelengthEditInfo) {
+            this.wavelengthEditInfo.value = this.getWavelength();
+            EditDialog.theEditDialog?.updateValue(this.wavelengthEditInfo);
+        }
     }
 
     getWavelength(): number {

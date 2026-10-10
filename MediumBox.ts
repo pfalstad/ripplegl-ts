@@ -74,7 +74,7 @@ export class MediumBox extends RectDragObject {
         if (n === 0) {
             this.speedIndex = MediumBox.getRefractiveIndex(ei.value);
             ei.value = Math.sqrt(1 / this.speedIndex);
-            EditDialog.theEditDialog!.updateValue(ei);
+            EditDialog.theEditDialog?.updateValue(ei);
         }
         if (n === 1)
             this.absorption = Math.min(.25, Math.max(0, ei.value));

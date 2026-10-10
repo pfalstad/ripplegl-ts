@@ -45,8 +45,10 @@ export class EditOptions implements Editable {
     setEditValue(n: number, ei: EditInfo): void {
         if (n === 0 && ei.value > 0) {
             this.sim.setResolution(Math.trunc(ei.value));
-            this.offsetEditInfo!.value = this.sim.windowOffsetX;
-            EditDialog.theEditDialog!.updateValue(this.offsetEditInfo!);
+            if (this.offsetEditInfo) {
+                this.offsetEditInfo.value = this.sim.windowOffsetX;
+                EditDialog.theEditDialog?.updateValue(this.offsetEditInfo);
+            }
         }
         if (n === 1 && ei.value > 0)
             this.sim.setResolution(this.sim.windowWidth, Math.trunc(ei.value));

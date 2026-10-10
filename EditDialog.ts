@@ -228,6 +228,8 @@ export class EditDialog {
             this.dialogEl.close();
         document.body.removeChild(this.dialogEl);
         this.cframe.editDialog = null;
+        if (EditDialog.theEditDialog === this)
+            EditDialog.theEditDialog = null;
         this.cframe.enableDisableUI();
     }
 
