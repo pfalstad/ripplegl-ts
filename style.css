@@ -107,6 +107,42 @@ select {
     cursor: default;
 }
 
+.menu-submenu {
+    position: relative;
+}
+
+.menu-submenu-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.menu-submenu.open > .menu-submenu-label {
+    background: #def;
+}
+
+.menu-subpanel {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    background: #fff;
+    border: 1px solid #999;
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 1001;
+    min-width: 160px;
+    flex-direction: column;
+}
+
+.menu-subpanel.flip-left {
+    left: auto;
+    right: 100%;
+}
+
+.menu-submenu.open > .menu-subpanel {
+    display: flex;
+}
+
 .menu-separator {
     height: 1px;
     background: #ccc;

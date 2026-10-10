@@ -82,6 +82,8 @@ interface MenuItemDesc {
     action?: () => void;
     element?: HTMLButtonElement;
     separator?: boolean;
+    disabled?: boolean;
+    children?: MenuItemDesc[]; // if set, this item opens a submenu
 }
 
 abstract class Setup {
@@ -540,7 +542,7 @@ export class RippleSim {
     // ==================== menus ====================
 
     private closeAllDropdowns(): void {
-        document.querySelectorAll(".menu-dropdown.open").forEach(el => el.classList.remove("open"));
+        document.querySelectorAll(".menu-dropdown.open, .menu-submenu.open").forEach(el => el.classList.remove("open"));
     }
 
     private makeMenuButton(container: HTMLElement, label: string): { btn: HTMLButtonElement, dropdown: HTMLElement } {
@@ -564,10 +566,19 @@ export class RippleSim {
     }
 
     private addMenuItem(dropdown: HTMLElement, desc: MenuItemDesc): HTMLButtonElement {
+        return this.renderMenuItem(dropdown, desc, (d) => {
+            this.closeAllDropdowns();
+            d.action!();
+        });
+    }
+
+    // build a menu item (or separator, or submenu with its children) into container.
+    // onPick is called when a leaf item is chosen.
+    private renderMenuItem(container: HTMLElement, desc: MenuItemDesc, onPick: (d: MenuItemDesc) => void): HTMLButtonElement {
         if (desc.separator) {
             const sep = document.createElement("div");
             sep.className = "menu-separator";
-            dropdown.appendChild(sep);
+            container.appendChild(sep);
             return null as any;
         }
         const item = document.createElement("button");
@@ -576,42 +587,96 @@ export class RippleSim {
             item.innerHTML = desc.html;
         else
             item.textContent = desc.label!;
-        item.addEventListener("click", () => {
-            this.closeAllDropdowns();
-            desc.action!();
-        });
-        dropdown.appendChild(item);
+        item.disabled = !!desc.disabled;
         desc.element = item;
+
+        if (desc.children == null) {
+            item.addEventListener("click", () => onPick(desc));
+            container.appendChild(item);
+            return item;
+        }
+
+        // submenu: opens on hover, or on tap for touch screens
+        const wrap = document.createElement("div");
+        wrap.className = "menu-submenu";
+        item.classList.add("menu-submenu-label");
+        const arrow = document.createElement("span");
+        arrow.className = "menu-arrow";
+        arrow.textContent = "\u25B8";
+        item.appendChild(arrow);
+        const panel = document.createElement("div");
+        panel.className = "menu-subpanel";
+        for (const child of desc.children)
+            this.renderMenuItem(panel, child, onPick);
+        wrap.appendChild(item);
+        wrap.appendChild(panel);
+        container.appendChild(wrap);
+
+        wrap.addEventListener("mouseenter", () => this.openSubmenu(wrap, panel));
+        wrap.addEventListener("mouseleave", () => wrap.classList.remove("open"));
+        item.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.openSubmenu(wrap, panel);
+        });
         return item;
     }
 
+    private openSubmenu(wrap: HTMLElement, panel: HTMLElement): void {
+        // close any other submenu open at this level
+        for (const sib of Array.from(wrap.parentElement!.children))
+            if (sib !== wrap) sib.classList.remove("open");
+        wrap.classList.add("open");
+        // keep the submenu on screen: open to the left if there's no room on the right,
+        // and shift it up if it would run off the bottom
+        panel.classList.remove("flip-left");
+        panel.style.top = "";
+        const rect = panel.getBoundingClientRect();
+        if (rect.right > window.innerWidth)
+            panel.classList.add("flip-left");
+        if (rect.bottom > window.innerHeight)
+            panel.style.top = Math.max(window.innerHeight - rect.bottom, -rect.top) + "px";
+    }
+
     composeMainMenu(): MenuItemDesc[] {
+        const add = (label: string, item: string): MenuItemDesc =>
+            ({ label: label, action: () => this.menuPerformed("main", item) });
         return [
-            { label: "Add Wall", action: () => this.menuPerformed("main", "Wall") },
-            { label: "Add Slit", action: () => this.menuPerformed("main", "Slit") },
-            { label: "Add Box", action: () => this.menuPerformed("main", "Box") },
-            { label: "Add Point Source", action: () => this.menuPerformed("main", "Source") },
-            { label: "Add Line Source", action: () => this.menuPerformed("main", "LineSource") },
-            { label: "Add Multipole Source", action: () => this.menuPerformed("main", "MultipoleSource") },
-            { label: "Add Phased Array Source", action: () => this.menuPerformed("main", "PhasedArraySource") },
-            { label: "Add Solid Box", action: () => this.menuPerformed("main", "SolidBox") },
-            { label: "Add Image...", action: () => this.menuPerformed("main", "Image") },
-            { label: "Add Moving Wall", action: () => this.menuPerformed("main", "MovingWall") },
-            { label: "Add Moving Source", action: () => this.menuPerformed("main", "MovingSource") },
-            { label: "Add Cavity", action: () => this.menuPerformed("main", "Cavity") },
-            { label: "Add Medium", action: () => this.menuPerformed("main", "MediumBox") },
-            { label: "Add Mode Box", action: () => this.menuPerformed("main", "ModeBox") },
-            { label: "Add Gradient", action: () => this.menuPerformed("main", "GradientBox") },
-            { label: "Add Ellipse", action: () => this.menuPerformed("main", "Ellipse") },
-            { label: "Add Prism", action: () => this.menuPerformed("main", "TrianglePrism") },
-            { label: "Add Ellipse Medium", action: () => this.menuPerformed("main", "MediumEllipse") },
-            { label: "Add Parabola", action: () => this.menuPerformed("main", "Parabola") },
-            { label: "Add Lens", action: () => this.menuPerformed("main", "Lens") },
-            { label: "Add Probe", action: () => this.menuPerformed("main", "Probe") },
-            { label: "Add Rotating Source", action: () => this.menuPerformed("main", "RotatingSource") },
-            { label: "Add Line", action: () => this.menuPerformed("main", "Line") },
-            { label: "Add Arrow", action: () => this.menuPerformed("main", "Arrow") },
-            { label: "Add Text", action: () => this.menuPerformed("main", "Text") },
+            { label: "Sources", children: [
+                add("Point Source", "Source"),
+                add("Line Source", "LineSource"),
+                add("Multipole Source", "MultipoleSource"),
+                add("Phased Array Source", "PhasedArraySource"),
+                add("Moving Source", "MovingSource"),
+                add("Rotating Source", "RotatingSource"),
+            ] },
+            { label: "Walls & Obstacles", children: [
+                add("Wall", "Wall"),
+                add("Slit", "Slit"),
+                add("Box", "Box"),
+                add("Solid Box", "SolidBox"),
+                add("Ellipse", "Ellipse"),
+                add("Parabola", "Parabola"),
+                add("Cavity", "Cavity"),
+                add("Moving Wall", "MovingWall"),
+            ] },
+            { label: "Media", children: [
+                add("Medium", "MediumBox"),
+                add("Ellipse Medium", "MediumEllipse"),
+                add("Gradient", "GradientBox"),
+                add("Prism", "TrianglePrism"),
+                add("Lens", "Lens"),
+                add("Mode Box", "ModeBox"),
+            ] },
+            { label: "Measurement", children: [
+                add("Probe", "Probe"),
+            ] },
+            { label: "Annotations", children: [
+                add("Text", "Text"),
+                add("Line", "Line"),
+                add("Arrow", "Arrow"),
+            ] },
+            { separator: true },
+            add("Image...", "Image"),
         ];
     }
 
@@ -773,8 +838,11 @@ export class RippleSim {
         if (item === "Image") {
             if (this.imageFileInputEl == null)
                 alert("Not supported in this browser.");
-            else
+            else {
+                // the image is added after the file is chosen, so remember where to put it
+                this.imagePlacementPoint = this.placementPoint;
                 this.imageFileInputEl.click();
+            }
         }
 
         let newObject: DragObject | null = null;
@@ -927,7 +995,9 @@ export class RippleSim {
         if (files && files.length >= 1) {
             this.pushUndo();
             const obj = Image.fromFile(files[0]);
+            this.placementPoint = this.imagePlacementPoint;
             obj.setInitialPosition();
+            this.placementPoint = null;
             this.dragObjects.push(obj);
             this.setSelectedObject(obj);
             this.preserveSelection = true;
@@ -1752,12 +1822,16 @@ export class RippleSim {
         this.dragging = false;
         this.dragStop = false;
         this.pokePoint = null;
+        this.imagePlacementPoint = null;
         this.mouseLocation = null;
     }
 
     private menuX = 0;
     private menuY = 0;
     private contextPanel: HTMLElement | null = null;
+    // where to put objects added from the context menu (window coordinates), or null to find space
+    private placementPoint: Point | null = null;
+    private imagePlacementPoint: Point | null = null;
 
     onContextMenu(e: MouseEvent): void {
         e.preventDefault();
@@ -1767,8 +1841,10 @@ export class RippleSim {
     }
 
     longPress(): void {
-        this.menuX = this.dragStartX;
-        this.menuY = this.dragStartY;
+        // dragStartX/Y are relative to the canvas; the menu position is in client coordinates
+        const rect = this.cv.getBoundingClientRect();
+        this.menuX = rect.left + this.dragStartX;
+        this.menuY = rect.top + this.dragStartY;
         this.doPopupMenu();
     }
 
@@ -1808,13 +1884,23 @@ export class RippleSim {
                 panel.appendChild(item);
             }
         } else {
-            for (const d of this.mainMenuItems) {
-                const item = document.createElement("button");
-                item.className = "menu-item";
-                item.textContent = d.label!;
-                item.addEventListener("click", () => { this.closeContextPanel(); d.action!(); });
-                panel.appendChild(item);
-            }
+            const rect = this.cv.getBoundingClientRect();
+            const clickPoint = this.snapPoint(new Point(
+                Math.trunc((this.menuX - rect.left) * this.windowWidth / this.winSize.width),
+                Math.trunc((this.menuY - rect.top) * this.windowHeight / this.winSize.height)));
+            const items: MenuItemDesc[] = [
+                { label: "Paste", disabled: this.pasteItem.disabled, action: () => this.menuPerformed("edit", "paste") },
+                { label: "Select All", action: () => this.menuPerformed("edit", "selectAll") },
+                { separator: true },
+                ...this.mainMenuItems,
+            ];
+            const onPick = (d: MenuItemDesc) => {
+                this.closeContextPanel();
+                this.placementPoint = clickPoint;
+                try { d.action!(); } finally { this.placementPoint = null; }
+            };
+            for (const d of items)
+                this.renderMenuItem(panel, d, onPick);
         }
 
         // clamp against the panel's actual rendered size and the viewport (the panel
@@ -1848,6 +1934,14 @@ export class RippleSim {
 
     findSpace(_obj: DragObject, _sx: number, _sy: number): Rectangle {
         const spsize = 20;
+        if (this.placementPoint != null) {
+            // put the object where the user clicked, kept inside the window
+            const w = Math.trunc(this.windowWidth / spsize) - 4;
+            const h = Math.trunc(this.windowHeight / spsize) - 4;
+            const x = Math.max(0, Math.min(this.placementPoint.x, this.windowWidth - 1 - w));
+            const y = Math.max(0, Math.min(this.placementPoint.y, this.windowHeight - 1 - h));
+            return new Rectangle(x, y, w, h);
+        }
         const spacegrid: boolean[][] = [];
         for (let i = 0; i !== spsize; i++)
             spacegrid.push(new Array(spsize).fill(false));
@@ -2023,10 +2117,27 @@ export class RippleSim {
             this.readImport(this.clipboard, true);
         }
 
+        if (this.placementPoint != null && this.dragObjects.length > oldsz) {
+            // pasting from the context menu: move the pasted group so its top left corner
+            // is at the click point, keeping it inside the window if possible
+            let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+            for (let i = oldsz; i !== this.dragObjects.length; i++) {
+                const r = this.dragObjects[i].boundingBox();
+                minx = Math.min(minx, r.x);
+                miny = Math.min(miny, r.y);
+                maxx = Math.max(maxx, r.x + r.width);
+                maxy = Math.max(maxy, r.y + r.height);
+            }
+            const x = Math.max(0, Math.min(this.placementPoint.x, this.windowWidth - 1 - (maxx - minx)));
+            const y = Math.max(0, Math.min(this.placementPoint.y, this.windowHeight - 1 - (maxy - miny)));
+            for (let i = oldsz; i !== this.dragObjects.length; i++)
+                this.dragObjects[i].drag(x - minx, y - miny);
+        }
+
         // select new items
         for (let i = oldsz; i !== this.dragObjects.length; i++) {
             const ce = this.dragObjects[i];
-            for (let j = 0; j !== oldsz; j++) {
+            for (let j = 0; this.placementPoint == null && j !== oldsz; j++) {
                 if (ce.boundingBox().equals(this.dragObjects[j].boundingBox())) {
                     ce.drag(Math.trunc(this.windowWidth / 32), 0);
                     j = -1;
