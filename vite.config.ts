@@ -5,6 +5,8 @@ export default defineConfig({
   server: {
     port: 5175,
     open: true,
-    host: true
+    host: true,
+    // Electron release builds, not part of the web app
+    watch: { ignored: ['**/offline/**'] }
   }
 })

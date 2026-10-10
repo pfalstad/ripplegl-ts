@@ -347,11 +347,13 @@ export class RippleSim {
         RippleSim.theSim = this;
 
         const qp = new QueryParameters();
+        let startColorScheme: string | null = null;
         try {
             const cct = qp.getValue("rol");
             if (cct != null)
                 this.startExampleText = cct.replace(/%24/g, "$");
             this.startExample = qp.getValue("startExample");
+            startColorScheme = qp.getValue("colorScheme");
         } catch (e) { /* ignored */ }
 
         this.appEl = document.getElementById("app")!;
@@ -506,6 +508,10 @@ export class RippleSim {
         this.schemeColors = [];
         if (this.colorChooser.getItemCount() === 0)
             this.addDefaultColorScheme();
+        if (startColorScheme != null) {
+            this.decodeColorScheme(startColorScheme);
+            this.colorChooser.select(this.colorChooser.getItemCount() - 1);
+        }
         this.doColor();
         this.setWaveType();
         this.setDamping();
@@ -1300,9 +1306,13 @@ export class RippleSim {
         const st = new StringTokenizer(s, " \t\n,");
         const cn = this.colorChooser.getItemCount();
         this.schemeColors[cn] = [];
-        while (st.hasMoreTokens()) {
-            for (let i = 0; i !== 9; i++)
+        for (let i = 0; i !== 9; i++) {
+            // colors left out (e.g. the absorbing area color, which older 8-color
+            // schemes don't have) come from the first scheme
+            if (st.hasMoreTokens())
                 this.schemeColors[cn][i] = Color.hex2Rgb(st.nextToken());
+            else
+                this.schemeColors[cn][i] = cn > 0 ? this.schemeColors[0][i] : new Color(0, 0, 0);
         }
         this.colorChooser.add("Color Scheme " + (cn + 1));
     }
