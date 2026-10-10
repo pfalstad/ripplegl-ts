@@ -718,7 +718,7 @@ export class RippleSim {
             this.addMenuItem(add.dropdown, d);
 
         // element context menu descriptors (used for canvas right-click / long-press when object selected)
-        this.elmEditMenuItem = { label: "Edit", action: () => this.menuPerformed("elm", "edit") };
+        this.elmEditMenuItem = { label: "Edit...", action: () => this.menuPerformed("elm", "edit") };
         this.elmRotateMenuItem = { label: "Rotate", action: () => this.menuPerformed("elm", "rotate") };
         this.elmSliderMenuItem = { label: "Sliders...", action: () => this.menuPerformed("elm", "sliders") };
         this.elmMenuItems = [
