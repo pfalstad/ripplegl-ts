@@ -34,6 +34,7 @@ import { ExportAsLocalFileDialog } from "./ExportAsLocalFileDialog";
 import { ImportFromTextDialog } from "./ImportFromTextDialog";
 import { LoadFile } from "./LoadFile";
 import { QueryParameters } from "./QueryParameters";
+import { moduleBaseURL } from "./ModuleBase";
 import { StringTokenizer } from "./StringTokenizer";
 import { DragObject } from "./DragObject";
 import { DragHandle } from "./DragHandle";
@@ -1349,7 +1350,7 @@ export class RippleSim {
 
     async getSetupList(): Promise<void> {
         try {
-            const url = "setuplist.txt?v=" + Math.floor(Math.random() * 0x7fffffff);
+            const url = moduleBaseURL + "setuplist.txt?v=" + Math.floor(Math.random() * 0x7fffffff);
             const response = await fetch(url);
             if (response.ok) {
                 const text = await response.text();
@@ -1391,7 +1392,7 @@ export class RippleSim {
         this.resetTime();
         this.console("reading example " + str);
         ExportAsLocalFileDialog.setLastFileName(null);
-        const url = "examples/" + str + "?v=" + Math.floor(Math.random() * 0x7fffffff);
+        const url = moduleBaseURL + "examples/" + str + "?v=" + Math.floor(Math.random() * 0x7fffffff);
         this.loadFileFromURL(url);
         this.enableDisableUI();
     }

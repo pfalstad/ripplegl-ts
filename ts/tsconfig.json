@@ -16,5 +16,7 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "include": ["ts"]
+  "include": ["*.ts"],
+  // vite.config.ts needs Node types; Vite checks it when loading it
+  "exclude": ["vite.config.ts"]
 }

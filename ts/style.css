@@ -299,7 +299,7 @@ dialog::backdrop {
     display: block;
     width: 12px;
     height: 12px;
-    background: transparent url(/x-2panel.png) left top no-repeat;
+    background: transparent url(./images/x-2panel.png) left top no-repeat;
 }
 
 .windowbox-controls a:hover {
@@ -307,12 +307,12 @@ dialog::backdrop {
 }
 
 .windowbox-controls a.windowbox-minimize {
-    background-image: url(/min-4panel.png);
+    background-image: url(./images/min-4panel.png);
     background-position: left top;
 }
 
 .windowbox-controls a.windowbox-maximize {
-    background-image: url(/min-4panel.png);
+    background-image: url(./images/min-4panel.png);
     background-position: left bottom;
 }
 
