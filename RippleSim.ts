@@ -221,7 +221,7 @@ export class RippleSim {
     verticalPanelWidth = 0;
     startExampleText: string | null = null;
     startExample: string | null = null;
-    versionString = "1.5";
+    versionString = "1.5ts";
 
     // menu items that need to be enabled/disabled dynamically
     undoItem!: HTMLButtonElement;
