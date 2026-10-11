@@ -16,8 +16,7 @@ const assetsDir = 'ripple'
 // into dist/<assetsDir>/, instead of Vite's default publicDir copy to dist
 // root, so they sit alongside the JS/CSS bundle. public/ripple/ (scripts and
 // the icon referenced with hardcoded "ripple/..." paths in Ripple.html) goes
-// to the same place, and shortrelay.php (fetched relative to the page) goes
-// to the dist root.
+// to the same place.
 function copyPublicAssets(): Plugin {
   const tsRoot = path.dirname(fileURLToPath(import.meta.url))
   const publicDir = path.join(tsRoot, 'public')
@@ -30,7 +29,6 @@ function copyPublicAssets(): Plugin {
       fs.cpSync(path.join(publicDir, 'examples'), path.join(nested, 'examples'), { recursive: true })
       fs.cpSync(path.join(publicDir, 'setuplist.txt'), path.join(nested, 'setuplist.txt'))
       fs.cpSync(path.join(publicDir, 'ripple'), nested, { recursive: true })
-      fs.cpSync(path.join(publicDir, 'shortrelay.php'), path.join(dist, 'shortrelay.php'))
     }
   }
 }
